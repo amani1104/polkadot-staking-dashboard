@@ -1,7 +1,7 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { ValidatorsContextInterface } from 'contexts/Validators/types';
+import type { ValidatorsContextInterface } from 'contexts/Validators/types';
 
 export const sessionValidators = {
   list: [],
@@ -21,17 +21,17 @@ export const defaultValidatorsContext: ValidatorsContextInterface = {
   // eslint-disable-next-line
   fetchValidatorPrefs: async (v) => null,
   // eslint-disable-next-line
-  addFavourite: (a) => {},
+  addFavorite: (a) => {},
   // eslint-disable-next-line
-  removeFavourite: (a) => {},
+  removeFavorite: (a) => {},
   validators: [],
   avgCommission: 0,
   meta: {},
   session: sessionValidators,
   sessionParachain: [],
-  favourites: [],
+  favorites: [],
   nominated: null,
   poolNominated: null,
-  favouritesList: null,
+  favoritesList: null,
   validatorCommunity: [],
 };

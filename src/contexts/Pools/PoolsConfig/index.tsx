@@ -1,15 +1,19 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
 import { bnToU8a, u8aConcat } from '@polkadot/util';
-import { EMPTY_H256, MOD_PREFIX, U32_OPTS } from 'consts';
-import React, { useState, useEffect, useRef } from 'react';
-import { PoolConfigState, PoolsConfigContextState } from 'contexts/Pools/types';
-import { AnyApi } from 'types';
+import BigNumber from 'bignumber.js';
+import BN from 'bn.js';
+import { EmptyH256, ModPrefix, U32Opts } from 'consts';
+import type {
+  PoolConfigState,
+  PoolsConfigContextState,
+} from 'contexts/Pools/types';
+import React, { useEffect, useRef, useState } from 'react';
+import type { AnyApi } from 'types';
 import { rmCommas, setStateWithRef } from 'Utils';
-import * as defaults from './defaults';
 import { useApi } from '../../Api';
+import * as defaults from './defaults';
 
 export const PoolsConfigContext = React.createContext<PoolsConfigContextState>(
   defaults.defaultPoolsConfigContext
@@ -32,16 +36,16 @@ export const PoolsConfigProvider = ({
   });
   const poolsConfigRef = useRef(poolsConfig);
 
-  // get favourite pools from local storage
-  const getFavourites = () => {
-    const _favourites = localStorage.getItem(
-      `${network.name.toLowerCase()}_favourite_pools`
+  // get favorite pools from local storage.
+  const getLocalFavorites = () => {
+    const localFavorites = localStorage.getItem(
+      `${network.name}_favorite_pools`
     );
-    return _favourites !== null ? JSON.parse(_favourites) : [];
+    return localFavorites !== null ? JSON.parse(localFavorites) : [];
   };
 
-  // stores the user's favourite pools
-  const [favourites, setFavourites] = useState<string[]>(getFavourites());
+  // stores the user's favorite pools
+  const [favorites, setFavorites] = useState<string[]>(getLocalFavorites());
 
   useEffect(() => {
     if (isReady) {
@@ -85,33 +89,41 @@ export const PoolsConfigProvider = ({
         _minCreateBond,
         _minJoinBond,
       ]) => {
-        // format optional configs to BN or null
+        // format optional configs to BigNumber or null
         _maxPoolMembers = _maxPoolMembers.toHuman();
         if (_maxPoolMembers !== null) {
-          _maxPoolMembers = new BN(rmCommas(_maxPoolMembers));
+          _maxPoolMembers = new BigNumber(rmCommas(_maxPoolMembers));
         }
         _maxPoolMembersPerPool = _maxPoolMembersPerPool.toHuman();
         if (_maxPoolMembersPerPool !== null) {
-          _maxPoolMembersPerPool = new BN(rmCommas(_maxPoolMembersPerPool));
+          _maxPoolMembersPerPool = new BigNumber(
+            rmCommas(_maxPoolMembersPerPool)
+          );
         }
         _maxPools = _maxPools.toHuman();
         if (_maxPools !== null) {
-          _maxPools = new BN(rmCommas(_maxPools));
+          _maxPools = new BigNumber(rmCommas(_maxPools));
         }
 
         setStateWithRef(
           {
             ...poolsConfigRef.current,
             stats: {
-              counterForPoolMembers: _counterForPoolMembers.toBn(),
-              counterForBondedPools: _counterForBondedPools.toBn(),
-              counterForRewardPools: _counterForRewardPools.toBn(),
-              lastPoolId: _lastPoolId.toBn(),
+              counterForPoolMembers: new BigNumber(
+                _counterForPoolMembers.toString()
+              ),
+              counterForBondedPools: new BigNumber(
+                _counterForBondedPools.toString()
+              ),
+              counterForRewardPools: new BigNumber(
+                _counterForRewardPools.toString()
+              ),
+              lastPoolId: new BigNumber(_lastPoolId.toString()),
               maxPoolMembers: _maxPoolMembers,
               maxPoolMembersPerPool: _maxPoolMembersPerPool,
               maxPools: _maxPools,
-              minCreateBond: _minCreateBond.toBn(),
-              minJoinBond: _minJoinBond.toBn(),
+              minCreateBond: new BigNumber(_minCreateBond.toString()),
+              minJoinBond: new BigNumber(_minJoinBond.toString()),
             },
           },
           setPoolsConfig,
@@ -131,56 +143,56 @@ export const PoolsConfigProvider = ({
   };
 
   /*
-   * Adds a favourite validator.
+   * Adds a favorite validator.
    */
-  const addFavourite = (address: string) => {
-    const _favourites: any = Object.assign(favourites);
-    if (!_favourites.includes(address)) {
-      _favourites.push(address);
+  const addFavorite = (address: string) => {
+    const newFavorites: any = Object.assign(favorites);
+    if (!newFavorites.includes(address)) {
+      newFavorites.push(address);
     }
 
     localStorage.setItem(
-      `${network.name.toLowerCase()}_favourite_pools`,
-      JSON.stringify(_favourites)
+      `${network.name}_favorite_pools`,
+      JSON.stringify(newFavorites)
     );
-    setFavourites([..._favourites]);
+    setFavorites([...newFavorites]);
   };
 
   /*
-   * Removes a favourite validator if they exist.
+   * Removes a favorite validator if they exist.
    */
-  const removeFavourite = (address: string) => {
-    let _favourites = Object.assign(favourites);
-    _favourites = _favourites.filter(
+  const removeFavorite = (address: string) => {
+    let newFavorites = Object.assign(favorites);
+    newFavorites = newFavorites.filter(
       (validator: string) => validator !== address
     );
     localStorage.setItem(
-      `${network.name.toLowerCase()}_favourite_pools`,
-      JSON.stringify(_favourites)
+      `${network.name}_favorite_pools`,
+      JSON.stringify(newFavorites)
     );
-    setFavourites([..._favourites]);
+    setFavorites([...newFavorites]);
   };
 
   // Helper: generates pool stash and reward accounts. assumes poolsPalletId is synced.
   const createAccounts = (poolId: number) => {
-    const poolIdBN = new BN(poolId);
+    const poolIdBigNumber = new BigNumber(poolId);
     return {
-      stash: createAccount(poolIdBN, 0),
-      reward: createAccount(poolIdBN, 1),
+      stash: createAccount(poolIdBigNumber, 0),
+      reward: createAccount(poolIdBigNumber, 1),
     };
   };
 
-  const createAccount = (poolId: BN, index: number): string => {
+  const createAccount = (poolId: BigNumber, index: number): string => {
     if (!api) return '';
     return api.registry
       .createType(
         'AccountId32',
         u8aConcat(
-          MOD_PREFIX,
+          ModPrefix,
           poolsPalletId,
           new Uint8Array([index]),
-          bnToU8a(poolId, U32_OPTS),
-          EMPTY_H256
+          bnToU8a(new BN(poolId.toString()), U32Opts),
+          EmptyH256
         )
       )
       .toString();
@@ -189,10 +201,10 @@ export const PoolsConfigProvider = ({
   return (
     <PoolsConfigContext.Provider
       value={{
-        addFavourite,
-        removeFavourite,
+        addFavorite,
+        removeFavorite,
         createAccounts,
-        favourites,
+        favorites,
         stats: poolsConfigRef.current.stats,
       }}
     >

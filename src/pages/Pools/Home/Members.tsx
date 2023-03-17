@@ -1,33 +1,32 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { PageRowWrapper } from 'Wrappers';
-import { CardWrapper } from 'library/Graphs/Wrappers';
+import { faBars } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useApi } from 'contexts/Api';
 import { useActivePools } from 'contexts/Pools/ActivePools';
 import { usePoolMembers } from 'contexts/Pools/PoolMembers';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { useTheme } from 'contexts/Themes';
-import { PoolState } from 'contexts/Pools/types';
+import { CardWrapper } from 'library/Graphs/Wrappers';
+import { useTranslation } from 'react-i18next';
+import { PageRowWrapper } from 'Wrappers';
 import { MembersList } from './MembersList';
 
 export const Members = () => {
-  const { network } = useApi();
+  const { t } = useTranslation('pages');
+  const { colors } = useApi().network;
   const { mode } = useTheme();
   const { getMembersOfPool } = usePoolMembers();
   const { selectedActivePool, isOwner, isStateToggler } = useActivePools();
 
   const poolMembers = getMembersOfPool(selectedActivePool?.id ?? 0);
-  const poolMembersTitle = `${poolMembers.length} Pool Member${
-    poolMembers.length === 1 ? `` : `s`
-  }`;
-
-  const networkColorsSecondary: any = network.colors.secondary;
-  const annuncementBorderColor = networkColorsSecondary[mode];
+  const poolMembersTitle = `${t('pools.poolMember', {
+    count: poolMembers.length,
+  })}`;
+  const annuncementBorderColor = colors.secondary[mode];
 
   const showBlockedPrompt =
-    selectedActivePool?.bondedPool?.state === PoolState.Block &&
+    selectedActivePool?.bondedPool?.state === 'Blocked' &&
     (isOwner() || isStateToggler());
 
   return (
@@ -39,12 +38,11 @@ export const Members = () => {
             style={{ border: `1px solid ${annuncementBorderColor}` }}
           >
             <div className="content">
-              <h3>Pool Currently Locked</h3>
+              <h3>{t('pools.poolCurrentlyLocked')}</h3>
               <h4>
-                You have permission to unbond and withdraw funds of any pool
-                member. Use a member&apos;s menu ({' '}
-                <FontAwesomeIcon icon={faBars} transform="shrink-2" /> ) to
-                select management options.
+                {t('pools.permissionToUnbond')}({' '}
+                <FontAwesomeIcon icon={faBars} transform="shrink-2" /> ){' '}
+                {t('pools.managementOptions')}
               </h4>
             </div>
           </CardWrapper>
@@ -52,18 +50,17 @@ export const Members = () => {
       )}
 
       {/* Pool in Destroying state: allow anyone to unbond & withdraw members */}
-      {selectedActivePool?.bondedPool?.state === PoolState.Destroy && (
+      {selectedActivePool?.bondedPool?.state === 'Destroying' && (
         <PageRowWrapper className="page-padding" noVerticalSpacer>
           <CardWrapper
             style={{ border: `1px solid ${annuncementBorderColor}` }}
           >
             <div className="content">
-              <h3>Pool in Destroying State</h3>
+              <h3>{t('pools.poolInDestroyingState')}</h3>
               <h4>
-                You have permission to unbond and withdraw funds of any pool
-                member. Use a member&apos;s menu ({' '}
-                <FontAwesomeIcon icon={faBars} transform="shrink-2" /> ) to
-                select management options.
+                {t('pools.permissionToUnbond')} ({' '}
+                <FontAwesomeIcon icon={faBars} transform="shrink-2" /> ){' '}
+                {t('pools.managementOptions')}
               </h4>
             </div>
           </CardWrapper>

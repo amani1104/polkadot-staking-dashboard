@@ -1,18 +1,22 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
+import type BigNumber from 'bignumber.js';
 
 export interface NetworkMetricsContextInterface {
+  activeEra: ActiveEra;
   metrics: NetworkMetrics;
 }
 
 export interface NetworkMetrics {
-  activeEra: {
-    index: number;
-    start: number;
-  };
-  totalIssuance: BN;
-  auctionCounter: BN;
-  earliestStoredSession: BN;
+  totalIssuance: BigNumber;
+  auctionCounter: BigNumber;
+  earliestStoredSession: BigNumber;
+  fastUnstakeErasToCheckPerBlock: number;
+  minimumActiveStake: BigNumber;
+}
+
+export interface ActiveEra {
+  index: BigNumber;
+  start: BigNumber;
 }

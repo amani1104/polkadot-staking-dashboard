@@ -1,68 +1,72 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { faChevronCircleRight } from '@fortawesome/free-solid-svg-icons';
+import { ButtonHelp, ButtonPrimary } from '@polkadotcloud/dashboard-ui';
+import { SectionFullWidthThreshold, SideMenuStickyThreshold } from 'consts';
+import { useBalances } from 'contexts/Accounts/Balances';
+import { useConnect } from 'contexts/Connect';
+import { useHelp } from 'contexts/Help';
+import { useModal } from 'contexts/Modal';
+import { useStaking } from 'contexts/Staking';
+import { useUi } from 'contexts/UI';
+import { GenerateNominations } from 'library/GenerateNominations';
+import { CardHeaderWrapper, CardWrapper } from 'library/Graphs/Wrappers';
+import { useUnstaking } from 'library/Hooks/useUnstaking';
+import { PageTitle } from 'library/PageTitle';
+import { StatBoxList } from 'library/StatBoxList';
+import { useTranslation } from 'react-i18next';
 import {
   PageRowWrapper,
   RowPrimaryWrapper,
   RowSecondaryWrapper,
 } from 'Wrappers';
-import { CardWrapper, CardHeaderWrapper } from 'library/Graphs/Wrappers';
-import { StatBoxList } from 'library/StatBoxList';
-import { useStaking } from 'contexts/Staking';
-import { useBalances } from 'contexts/Balances';
-import { useConnect } from 'contexts/Connect';
-import { Button } from 'library/Button';
-import { PageTitle } from 'library/PageTitle';
-import { OpenHelpIcon } from 'library/OpenHelpIcon';
-import { useModal } from 'contexts/Modal';
-import { useUi } from 'contexts/UI';
-import { faChevronCircleRight } from '@fortawesome/free-solid-svg-icons';
-import {
-  SECTION_FULL_WIDTH_THRESHOLD,
-  SIDE_MENU_STICKY_THRESHOLD,
-} from 'consts';
-import { GenerateNominations } from 'library/GenerateNominations';
-import { Nominations } from './Nominations';
-import { ManageBond } from './ManageBond';
-import ActiveNominationsStatBox from './Stats/ActiveNominations';
-import InacctiveNominationsStatBox from './Stats/InactiveNominations';
-import MinimumActiveBondStatBox from './Stats/MinimumActiveBond';
 import { ControllerNotImported } from './ControllerNotImported';
+import { ManageBond } from './ManageBond';
+import { Nominations } from './Nominations';
+import { ActiveNominatorsStat } from './Stats/ActiveNominators';
+import { MinimumActiveStakeStat } from './Stats/MinimumActiveStake';
+import { MinimumNominatorBondStat } from './Stats/MinimumNominatorBond';
 import { Status } from './Status';
+import { UnstakePrompts } from './UnstakePrompts';
 
 export const Active = () => {
+  const { t } = useTranslation('pages');
   const { openModalWith } = useModal();
   const { activeAccount } = useConnect();
   const { isSyncing } = useUi();
   const { targets, setTargets, inSetup } = useStaking();
   const { getAccountNominations } = useBalances();
+  const { isFastUnstaking } = useUnstaking();
   const nominations = getAccountNominations(activeAccount);
+  const { openHelp } = useHelp();
 
-  const ROW_HEIGHT = 275;
+  const ROW_HEIGHT = 220;
 
   return (
     <>
-      <PageTitle title="Solo Staking" />
+      <PageTitle title={t('nominate.nominate')} />
       <StatBoxList>
-        <MinimumActiveBondStatBox />
-        <ActiveNominationsStatBox />
-        <InacctiveNominationsStatBox />
+        <ActiveNominatorsStat />
+        <MinimumNominatorBondStat />
+        <MinimumActiveStakeStat />
       </StatBoxList>
       <ControllerNotImported />
+      <UnstakePrompts />
       <PageRowWrapper className="page-padding" noVerticalSpacer>
         <RowPrimaryWrapper
           hOrder={1}
           vOrder={0}
-          thresholdStickyMenu={SIDE_MENU_STICKY_THRESHOLD}
-          thresholdFullWidth={SECTION_FULL_WIDTH_THRESHOLD}
+          thresholdStickyMenu={SideMenuStickyThreshold}
+          thresholdFullWidth={SectionFullWidthThreshold}
         >
           <Status height={ROW_HEIGHT} />
         </RowPrimaryWrapper>
         <RowSecondaryWrapper
           hOrder={0}
           vOrder={1}
-          thresholdStickyMenu={SIDE_MENU_STICKY_THRESHOLD}
-          thresholdFullWidth={SECTION_FULL_WIDTH_THRESHOLD}
+          thresholdStickyMenu={SideMenuStickyThreshold}
+          thresholdFullWidth={SectionFullWidthThreshold}
         >
           <CardWrapper height={ROW_HEIGHT}>
             <ManageBond />
@@ -72,23 +76,28 @@ export const Active = () => {
       <PageRowWrapper className="page-padding" noVerticalSpacer>
         <CardWrapper>
           {nominations.length || inSetup() || isSyncing ? (
-            <Nominations bondType="stake" nominator={activeAccount} />
+            <Nominations bondFor="nominator" nominator={activeAccount} />
           ) : (
             <>
               <CardHeaderWrapper withAction>
                 <h3>
-                  Start Nominating
-                  <OpenHelpIcon helpKey="Nominations" />
+                  {t('nominate.nominate')}
+                  <ButtonHelp
+                    marginLeft
+                    onClick={() => openHelp('Nominations')}
+                  />
                 </h3>
                 <div>
-                  <Button
-                    small
-                    inline
-                    primary
-                    title="Nominate"
-                    icon={faChevronCircleRight}
-                    transform="grow-1"
-                    disabled={targets.length === 0 || inSetup() || isSyncing}
+                  <ButtonPrimary
+                    text={t('nominate.nominate')}
+                    iconLeft={faChevronCircleRight}
+                    iconTransform="grow-1"
+                    disabled={
+                      targets.nominations.length === 0 ||
+                      inSetup() ||
+                      isSyncing ||
+                      isFastUnstaking
+                    }
                     onClick={() => openModalWith('Nominate', {}, 'small')}
                   />
                 </div>
@@ -110,5 +119,3 @@ export const Active = () => {
     </>
   );
 };
-
-export default Active;

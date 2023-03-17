@@ -1,34 +1,31 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import moment from 'moment';
-import { Bar } from 'react-chartjs-2';
+import BigNumber from 'bignumber.js';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
   BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
 } from 'chart.js';
 import { useApi } from 'contexts/Api';
-import {
-  defaultThemes,
-  networkColors,
-  networkColorsSecondary,
-  networkColorsTransparent,
-} from 'theme/default';
-import { useTheme } from 'contexts/Themes';
-import { humanNumber } from 'Utils';
-import { useUi } from 'contexts/UI';
-import { useStaking } from 'contexts/Staking';
-import { AnySubscan } from 'types';
 import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
+import { useStaking } from 'contexts/Staking';
 import { useSubscan } from 'contexts/Subscan';
-import { PayoutBarProps } from './types';
+import { useTheme } from 'contexts/Themes';
+import { useUi } from 'contexts/UI';
+import { format, fromUnixTime } from 'date-fns';
+import { locales } from 'locale';
+import { Bar } from 'react-chartjs-2';
+import { useTranslation } from 'react-i18next';
+import { graphColors } from 'styles/graphs';
+import type { AnySubscan } from 'types';
+import type { PayoutBarProps } from './types';
 import { formatRewardsForGraphs } from './Utils';
 
 ChartJS.register(
@@ -42,60 +39,76 @@ ChartJS.register(
   Legend
 );
 
-export const PayoutBar = (props: PayoutBarProps) => {
-  const { days, height } = props;
-
+export const PayoutBar = ({ days, height }: PayoutBarProps) => {
+  const { i18n, t } = useTranslation('library');
   const { mode } = useTheme();
-  const { network } = useApi();
+  const { unit, units, colors } = useApi().network;
   const { isSyncing } = useUi();
   const { inSetup } = useStaking();
   const { membership } = usePoolMemberships();
-  const { payouts, poolClaims } = useSubscan();
+  const { payouts, poolClaims, unclaimedPayouts } = useSubscan();
 
-  const { units } = network;
-  const notStaking = !isSyncing && inSetup() && !membership;
-  const average = 1;
-
-  const { payoutsByDay, poolClaimsByDay } = formatRewardsForGraphs(
-    days,
-    average,
-    units,
-    payouts,
-    poolClaims
+  // remove slashes from payouts (graph does not support negative values).
+  const payoutsNoSlash = payouts.filter(
+    (p: AnySubscan) => p.event_id !== 'Slashed'
   );
+
+  const unclaimedPayoutsNoSlash = unclaimedPayouts.filter(
+    (p: AnySubscan) => p.event_id !== 'Slashed'
+  );
+
+  const notStaking = !isSyncing && inSetup() && !membership;
+  const { payoutsByDay, poolClaimsByDay, unclaimPayoutsByDay } =
+    formatRewardsForGraphs(
+      days,
+      units,
+      payoutsNoSlash,
+      poolClaims,
+      unclaimedPayoutsNoSlash
+    );
 
   // determine color for payouts
   const colorPayouts = notStaking
-    ? networkColorsTransparent[`${network.name}-${mode}`]
-    : networkColors[`${network.name}-${mode}`];
+    ? colors.transparent[mode]
+    : colors.primary[mode];
 
   // determine color for poolClaims
   const colorPoolClaims = notStaking
-    ? networkColorsTransparent[`${network.name}-${mode}`]
-    : networkColorsSecondary[`${network.name}-${mode}`];
+    ? colors.transparent[mode]
+    : colors.secondary[mode];
 
   const data = {
     labels: payoutsByDay.map((item: AnySubscan) => {
-      return moment.unix(item.block_timestamp).format('Do MMM');
+      const dateObj = format(fromUnixTime(item.block_timestamp), 'do MMM', {
+        locale: locales[i18n.resolvedLanguage],
+      });
+      return `${dateObj}`;
     }),
     datasets: [
       {
-        label: 'Payout',
-        data: payoutsByDay.map((item: AnySubscan) => {
-          return item.amount;
-        }),
+        order: 1,
+        label: t('payout'),
+        data: payoutsByDay.map((item: AnySubscan) => item.amount),
         borderColor: colorPayouts,
         backgroundColor: colorPayouts,
         pointRadius: 0,
         borderRadius: 3,
       },
       {
-        label: 'Pool Claim',
-        data: poolClaimsByDay.map((item: AnySubscan) => {
-          return item.amount;
-        }),
+        order: 2,
+        label: t('poolClaim'),
+        data: poolClaimsByDay.map((item: AnySubscan) => item.amount),
         borderColor: colorPoolClaims,
         backgroundColor: colorPoolClaims,
+        pointRadius: 0,
+        borderRadius: 3,
+      },
+      {
+        order: 3,
+        label: t('unclaimedPayouts'),
+        data: unclaimPayoutsByDay.map((item: AnySubscan) => item.amount),
+        borderColor: colorPayouts,
+        backgroundColor: colors.pending[mode],
         pointRadius: 0,
         borderRadius: 3,
       },
@@ -112,7 +125,6 @@ export const PayoutBar = (props: PayoutBarProps) => {
         stacked: true,
         grid: {
           display: false,
-          drawBorder: true,
         },
         ticks: {
           font: {
@@ -128,9 +140,11 @@ export const PayoutBar = (props: PayoutBarProps) => {
             size: 10,
           },
         },
+        border: {
+          display: false,
+        },
         grid: {
-          color: defaultThemes.graphs.grid[mode],
-          borderColor: defaultThemes.transparent[mode],
+          color: graphColors.grid[mode],
         },
       },
     },
@@ -143,18 +157,20 @@ export const PayoutBar = (props: PayoutBarProps) => {
       },
       tooltip: {
         displayColors: false,
-        backgroundColor: defaultThemes.graphs.tooltip[mode],
-        bodyColor: defaultThemes.text.invert[mode],
+        backgroundColor: graphColors.tooltip[mode],
+        titleColor: graphColors.label[mode],
+        bodyColor: graphColors.label[mode],
         bodyFont: {
           weight: '600',
         },
         callbacks: {
-          title: () => {
-            return [];
-          },
-          label: (context: any) => {
-            return `${humanNumber(context.parsed.y)} ${network.unit}`;
-          },
+          title: () => [],
+          label: (context: any) =>
+            `${
+              context.dataset.order === 3 ? `${t('pending')}: ` : ''
+            }${new BigNumber(context.parsed.y)
+              .decimalPlaces(units)
+              .toFormat()} ${unit}`,
         },
       },
     },
@@ -163,12 +179,10 @@ export const PayoutBar = (props: PayoutBarProps) => {
   return (
     <div
       style={{
-        height: height === undefined ? 'auto' : height,
+        height: height || 'auto',
       }}
     >
       <Bar options={options} data={data} />
     </div>
   );
 };
-
-export default PayoutBar;

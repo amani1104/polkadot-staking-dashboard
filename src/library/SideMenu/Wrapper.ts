@@ -1,23 +1,15 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import styled from 'styled-components';
 import {
-  SIDE_MENU_MAXIMISED_WIDTH,
-  SIDE_MENU_MINIMISED_WIDTH,
-  SIDE_MENU_STICKY_THRESHOLD,
+  SideMenuMaximisedWidth,
+  SideMenuMinimisedWidth,
+  SideMenuStickyThreshold,
 } from 'consts';
-import {
-  textSecondary,
-  backgroundOverlay,
-  borderPrimary,
-  networkColor,
-  modalBackground,
-} from 'theme';
-import { MinimisedProps } from './types';
+import styled from 'styled-components';
+import type { MinimisedProps } from './types';
 
 export const Wrapper = styled.div<MinimisedProps>`
-  box-sizing: border-box;
   border-radius: ${(props) => (props.minimised ? '0.7rem' : 0)};
   background: none;
   padding: 1rem 1rem 1rem 1.25rem;
@@ -29,13 +21,19 @@ export const Wrapper = styled.div<MinimisedProps>`
   backdrop-filter: blur(4px);
   width: ${(props) =>
     props.minimised
-      ? `${SIDE_MENU_MINIMISED_WIDTH}px`
-      : `${SIDE_MENU_MAXIMISED_WIDTH}px`};
+      ? `${SideMenuMinimisedWidth}px`
+      : `${SideMenuMaximisedWidth}px`};
 
-  @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
-    background: ${backgroundOverlay};
+  @media (max-width: ${SideMenuStickyThreshold}px) {
+    background: var(--gradient-side-menu);
     transition: all 0.2s;
     border-radius: 0.75rem;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   section {
@@ -50,14 +48,16 @@ export const Wrapper = styled.div<MinimisedProps>`
       padding-top: 0.5rem;
 
       button {
+        color: var(--text-color-secondary);
         position: relative;
-        color: ${textSecondary};
         transition: color 0.2s;
-        margin-top: ${(props) => (props.minimised ? '1.25rem' : 0)};
+        margin-top: ${(props) => (props.minimised ? '1rem' : 0)};
+        margin-right: ${(props) => (props.minimised ? 0 : '0.9rem')};
         opacity: 0.75;
+        padding: 0.1rem;
 
         path {
-          fill: ${textSecondary};
+          fill: var(--text-color-secondary);
         }
         &:hover {
           opacity: 1;
@@ -77,37 +77,34 @@ export const LogoWrapper = styled.button<MinimisedProps>`
   margin-bottom: ${(props) => (props.minimised ? '1.5rem' : '1rem')};
   position: relative;
 
-  > .beta {
-    color: ${networkColor};
-    position: absolute;
-    top: -7px;
-    font-size: 0.7rem;
-  }
-  > .beta-min {
-    color: ${networkColor};
-    background: ${modalBackground};
-    position: absolute;
-    right: 0px;
-    z-index: 2;
-    font-size: 0.6rem;
-    padding: 0.1rem 0.45rem;
-    border-radius: 0.5rem;
-  }
   ellipse {
-    fill: ${networkColor};
+    fill: var(--network-color-primary);
   }
 `;
 
 export const Separator = styled.div`
-  border-bottom: 1px solid ${borderPrimary};
+  border-bottom: 1px solid var(--border-primary-color);
   width: 100%;
   margin: 1rem 1rem 0.5rem 0;
 `;
 
-export const ConnectionSymbol = styled.div<{ color: any }>`
+export const ConnectionSymbol = styled.div`
   width: 0.6rem;
   height: 0.6rem;
   background: ${(props) => props.color};
   border-radius: 50%;
   margin: 0 0.7rem;
+
+  &.success {
+    background: var(--status-success-color);
+    color: var(--status-success-color);
+  }
+  &.warning {
+    background: var(--status-warning-color);
+    color: var(--status-warning-color);
+  }
+  &.danger {
+    background: var(--status-danger-color);
+    color: var(--status-danger-color);
+  }
 `;

@@ -1,36 +1,47 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useRef } from 'react';
-import { useAnimation } from 'framer-motion';
 import { useModal } from 'contexts/Modal';
-import { ErrorBoundary } from 'react-error-boundary';
+import { useAnimation } from 'framer-motion';
 import { ErrorFallbackModal } from 'library/ErrorBoundary';
-import { PoolNominations } from './PoolNominations';
-import { ModalWrapper, ContentWrapper, HeightWrapper } from './Wrappers';
-import { ConnectAccounts } from './ConnectAccounts';
-import { ValidatorMetrics } from './ValidatorMetrics';
-import { UpdateController } from './UpdateController';
-import { Settings } from './Settings';
-import { UpdateBond } from './UpdateBond';
-import { UpdatePayee } from './UpdatePayee';
+import { useEffect, useRef } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { AccountPoolRoles } from './AccountPoolRoles';
+import { Accounts } from './Accounts';
+import { Bio } from './Bio';
+import { Bond } from './Bond';
 import { ChangeNominations } from './ChangeNominations';
-import { Nominate } from './Nominate';
-import { UnlockChunks } from './UnlockChunks';
-import { NominatePool } from './NominatePool';
+import { ChangePoolRoles } from './ChangePoolRoles';
+import { ChooseLanguage } from './ChooseLanguage';
+import { ClaimReward } from './ClaimReward';
+import { Connect } from './Connect';
+import { GoToFeedback } from './GoToFeedback';
 import { JoinPool } from './JoinPool';
 import { LeavePool } from './LeavePool';
-import { ChangePoolRoles } from './ChangePoolRoles';
-import { ClaimReward } from './ClaimReward';
-import { SelectFavourites } from './SelectFavourites';
-import { NominateFromFavourites } from './NominateFromFavourites';
-import { Networks } from './Networks';
-import { Bio } from './Bio';
+import { ManageFastUnstake } from './ManageFastUnstake';
 import { ManagePool } from './ManagePool';
-import { GoToFeedback } from './GoToFeedback';
+import { Networks } from './Networks';
+import { Nominate } from './Nominate';
+import { NominateFromFavorites } from './NominateFromFavorites';
+import { NominatePool } from './NominatePool';
+import { PoolNominations } from './PoolNominations';
+import { SelectFavorites } from './SelectFavorites';
+import { Settings } from './Settings';
+import { StartStaking } from './StartStaking';
+import { Unbond } from './Unbond';
 import { UnbondPoolMember } from './UnbondPoolMember';
+import { UnlockChunks } from './UnlockChunks';
+import { Unstake } from './Unstake';
+import { UpdateController } from './UpdateController';
+import { UpdatePayee } from './UpdatePayee';
+import { ValidatorMetrics } from './ValidatorMetrics';
 import { WithdrawPoolMember } from './WithdrawPoolMember';
-import { AccountPoolRoles } from './AccountPoolRoles';
+import {
+  ContentWrapper,
+  HeightWrapper,
+  ModalBlurWrapper,
+  ModalWrapper,
+} from './Wrappers';
 
 export const Modal = () => {
   const { setModalHeight, setStatus, status, modal, size, height, resize } =
@@ -48,14 +59,12 @@ export const Modal = () => {
     setStatus(0);
   };
 
-  const variants = {
-    hidden: {
-      opacity: 0,
-    },
-    visible: {
-      opacity: 1,
-    },
-  };
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  });
 
   useEffect(() => {
     // modal has been opened - fade in
@@ -76,75 +85,103 @@ export const Modal = () => {
   }, [resize]);
 
   const handleResize = () => {
-    let _height = modalRef.current?.clientHeight ?? 0;
-    _height = _height > maxHeight ? maxHeight : _height;
-    setModalHeight(_height);
+    if (status !== 1) return;
+    let h = modalRef.current?.clientHeight ?? 0;
+    h = h > maxHeight ? maxHeight : h;
+    setModalHeight(h);
   };
 
   if (status === 0) {
     return <></>;
   }
 
+  const variants = {
+    hidden: {
+      opacity: 0,
+    },
+    visible: {
+      opacity: 1,
+    },
+  };
+  const transition = {
+    duration: 0.15,
+  };
+  const initial = {
+    opacity: 0,
+  };
+
   return (
-    <ModalWrapper
-      initial={{
-        opacity: 0,
-      }}
-      animate={controls}
-      transition={{
-        duration: 0.15,
-      }}
-      variants={variants}
-    >
-      <div>
-        <HeightWrapper
-          size={size}
-          style={{
-            height,
-            overflow: height >= maxHeight ? 'scroll' : 'hidden',
-          }}
+    <>
+      <ModalBlurWrapper
+        initial={initial}
+        animate={controls}
+        transition={transition}
+        variants={variants}
+      />
+      {status !== 3 ? (
+        <ModalWrapper
+          initial={initial}
+          animate={controls}
+          transition={transition}
+          variants={variants}
         >
-          <ContentWrapper ref={modalRef}>
-            <ErrorBoundary FallbackComponent={ErrorFallbackModal}>
-              {modal === 'AccountPoolRoles' && <AccountPoolRoles />}
-              {modal === 'Bio' && <Bio />}
-              {modal === 'ChangeNominations' && <ChangeNominations />}
-              {modal === 'ChangePoolRoles' && <ChangePoolRoles />}
-              {modal === 'ClaimReward' && <ClaimReward />}
-              {modal === 'ConnectAccounts' && <ConnectAccounts />}
-              {modal === 'JoinPool' && <JoinPool />}
-              {modal === 'Settings' && <Settings />}
-              {modal === 'UpdateController' && <UpdateController />}
-              {modal === 'UpdateBond' && <UpdateBond />}
-              {modal === 'UpdatePayee' && <UpdatePayee />}
-              {modal === 'ValidatorMetrics' && <ValidatorMetrics />}
-              {modal === 'ManagePool' && <ManagePool />}
-              {modal === 'Nominate' && <Nominate />}
-              {modal === 'UnlockChunks' && <UnlockChunks />}
-              {modal === 'NominatePool' && <NominatePool />}
-              {modal === 'LeavePool' && <LeavePool />}
-              {modal === 'SelectFavourites' && <SelectFavourites />}
-              {modal === 'Networks' && <Networks />}
-              {modal === 'NominateFromFavourites' && <NominateFromFavourites />}
-              {modal === 'PoolNominations' && <PoolNominations />}
-              {modal === 'UnbondPoolMember' && <UnbondPoolMember />}
-              {modal === 'WithdrawPoolMember' && <WithdrawPoolMember />}
-              {modal === 'GoToFeedback' && <GoToFeedback />}
-            </ErrorBoundary>
-          </ContentWrapper>
-        </HeightWrapper>
-        <button
-          type="button"
-          className="close"
-          onClick={() => {
-            onFadeOut();
-          }}
-        >
-          &nbsp;
-        </button>
-      </div>
-    </ModalWrapper>
+          <div>
+            <HeightWrapper
+              size={size}
+              style={{
+                height,
+                overflow: height >= maxHeight ? 'scroll' : 'hidden',
+              }}
+            >
+              <ContentWrapper ref={modalRef}>
+                <ErrorBoundary FallbackComponent={ErrorFallbackModal}>
+                  {modal === 'AccountPoolRoles' && <AccountPoolRoles />}
+                  {modal === 'Bio' && <Bio />}
+                  {modal === 'Bond' && <Bond />}
+                  {modal === 'ChangeNominations' && <ChangeNominations />}
+                  {modal === 'ChangePoolRoles' && <ChangePoolRoles />}
+                  {modal === 'ChooseLanguage' && <ChooseLanguage />}
+                  {modal === 'ClaimReward' && <ClaimReward />}
+                  {modal === 'Connect' && <Connect />}
+                  {modal === 'Accounts' && <Accounts />}
+                  {modal === 'GoToFeedback' && <GoToFeedback />}
+                  {modal === 'JoinPool' && <JoinPool />}
+                  {modal === 'LeavePool' && <LeavePool />}
+                  {modal === 'ManagePool' && <ManagePool />}
+                  {modal === 'ManageFastUnstake' && <ManageFastUnstake />}
+                  {modal === 'Networks' && <Networks />}
+                  {modal === 'Nominate' && <Nominate />}
+                  {modal === 'NominateFromFavorites' && (
+                    <NominateFromFavorites />
+                  )}
+                  {modal === 'NominatePool' && <NominatePool />}
+                  {modal === 'PoolNominations' && <PoolNominations />}
+                  {modal === 'SelectFavorites' && <SelectFavorites />}
+                  {modal === 'Settings' && <Settings />}
+                  {modal === 'StartStaking' && <StartStaking />}
+                  {modal === 'ValidatorMetrics' && <ValidatorMetrics />}
+                  {modal === 'UnbondPoolMember' && <UnbondPoolMember />}
+                  {modal === 'UnlockChunks' && <UnlockChunks />}
+                  {modal === 'Unstake' && <Unstake />}
+                  {modal === 'UpdateController' && <UpdateController />}
+                  {modal === 'Unbond' && <Unbond />}
+                  {modal === 'UpdatePayee' && <UpdatePayee />}
+                  {modal === 'WithdrawPoolMember' && <WithdrawPoolMember />}
+                </ErrorBoundary>
+              </ContentWrapper>
+            </HeightWrapper>
+            <button
+              type="button"
+              className="close"
+              onClick={() => {
+                onFadeOut();
+              }}
+            >
+              &nbsp;
+            </button>
+          </div>
+        </ModalWrapper>
+      ) : null}
+    </>
   );
 };
-
-export default Modal;

@@ -1,15 +1,11 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import React from 'react';
-import { Wrapper, ListWrapper } from './Wrapper';
+import { ListWrapper, Wrapper } from './Wrapper';
 
-export const StatBoxList = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <Wrapper className="page-padding">
-      <ListWrapper>{children}</ListWrapper>
-    </Wrapper>
-  );
-};
-
-export default StatBoxList;
+export const StatBoxList = ({ children }: { children: React.ReactNode }) => (
+  <Wrapper className="page-padding">
+    <ListWrapper>{children}</ListWrapper>
+  </Wrapper>
+);

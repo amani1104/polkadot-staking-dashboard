@@ -1,8 +1,11 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { ExternalAccount, ExtensionAccount } from 'contexts/Connect/types';
-import { Balance } from 'contexts/Balances/types';
+import type BigNumber from 'bignumber.js';
+import type { Balance } from 'contexts/Accounts/Balances/types';
+import type { ExternalAccount } from 'contexts/Connect/types';
+import type { ExtensionAccount } from 'contexts/Extensions/types';
+import type { BondFor } from 'types';
 
 export interface ExtensionAccountItem extends ExtensionAccount {
   active?: boolean;
@@ -26,51 +29,50 @@ export interface DropdownInput {
 export interface AccountDropdownProps {
   items: Array<InputItem>;
   onChange: (o: any) => void;
-  placeholder: string;
-  value: InputItem;
+  placeholder?: string;
+  selected: InputItem;
   current: InputItem;
   height: string | number | undefined;
 }
 
-export interface AccountSelectProps {
-  items: Array<InputItem>;
-  onChange: (o: any) => void;
-  placeholder: string;
-  value: InputItem;
-}
-
 export interface BondFeedbackProps {
+  syncing?: boolean;
   setters: any;
-  bondType: string;
+  bondFor: BondFor;
   defaultBond: number | null;
   inSetup?: boolean;
   listenIsValid: { (v: boolean): void } | { (): void };
-  warnings?: string[];
+  parentErrors?: Array<string>;
   disableTxFeeUpdate?: boolean;
   setLocalResize?: () => void;
+  txFees: BigNumber;
+  maxWidth?: boolean;
 }
 
 export interface BondInputProps {
+  freeBalance: BigNumber;
+  value: string;
+  defaultValue: string;
+  syncing?: boolean;
   setters: any;
-  value: any;
-  defaultValue: number | string;
   disabled: boolean;
-  freeBalance: number;
   disableTxFeeUpdate?: boolean;
 }
 
 export interface UnbondFeedbackProps {
   setters: any;
-  bondType: string;
-  defaultBond: number | null;
+  bondFor: BondFor;
+  defaultBond?: number;
   inSetup?: boolean;
   listenIsValid: { (v: boolean): void } | { (): void };
-  warnings?: string[];
+  parentErrors?: Array<string>;
   setLocalResize?: () => void;
+  txFees: BigNumber;
 }
 
 export interface UnbondInputProps {
-  freeToUnbondToMin: number;
+  active: BigNumber;
+  unbondToMin: BigNumber;
   defaultValue: number | string;
   disabled: boolean;
   setters: any;
@@ -78,7 +80,7 @@ export interface UnbondInputProps {
 }
 
 export interface NominateStatusBarProps {
-  value: number;
+  value: BigNumber;
 }
 
 export interface DropdownProps {

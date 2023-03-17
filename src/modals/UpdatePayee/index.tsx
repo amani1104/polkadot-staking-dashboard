@@ -1,26 +1,31 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faWallet } from '@fortawesome/free-solid-svg-icons';
 import { faArrowAltCircleUp } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { Dropdown } from 'library/Form/Dropdown';
-import { useStaking } from 'contexts/Staking';
-import { useBalances } from 'contexts/Balances';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import { useBalances } from 'contexts/Accounts/Balances';
 import { useApi } from 'contexts/Api';
-import { useModal } from 'contexts/Modal';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
 import { useConnect } from 'contexts/Connect';
-import { PAYEE_STATUS } from 'consts';
-import { Warning } from 'library/Form/Warning';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
+import { useModal } from 'contexts/Modal';
+import type { PayeeConfig, PayeeOptions } from 'contexts/Setup/types';
+import { useStaking } from 'contexts/Staking';
 import { useTxFees } from 'contexts/TxFees';
+import { Warning } from 'library/Form/Warning';
+import type { PayeeItem } from 'library/Hooks/usePayeeConfig';
+import { usePayeeConfig } from 'library/Hooks/usePayeeConfig';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
 import { Title } from 'library/Modal/Title';
-import { FooterWrapper, PaddingWrapper } from '../Wrappers';
+import { PayeeInput } from 'library/PayeeInput';
+import { SelectItems } from 'library/SelectItems';
+import { SelectItem } from 'library/SelectItems/Item';
+import { SubmitTx } from 'library/SubmitTx';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MaybeAccount } from 'types';
+import { PaddingWrapper, WarningsWrapper } from '../Wrappers';
 
 export const UpdatePayee = () => {
+  const { t } = useTranslation('modals');
   const { api } = useApi();
   const { activeAccount } = useConnect();
   const { getBondedAccount } = useBalances();
@@ -28,108 +33,140 @@ export const UpdatePayee = () => {
   const controller = getBondedAccount(activeAccount);
   const { staking, getControllerNotImported } = useStaking();
   const { txFeesValid } = useTxFees();
-
+  const { getPayeeItems } = usePayeeConfig();
   const { payee } = staking;
 
-  const _selected: any = PAYEE_STATUS.find((item) => item.key === payee);
-  const [selected, setSelected]: any = useState(null);
-
-  // reset selected value on account change
-  useEffect(() => {
-    setSelected(null);
-  }, [activeAccount]);
-
-  // ensure selected key is valid
-  useEffect(() => {
-    const exists = PAYEE_STATUS.find((item) => item.key === selected?.key);
-    setValid(exists !== undefined);
-  }, [selected]);
-
-  const handleOnChange = ({ selectedItem }: any) => {
-    setSelected(selectedItem);
+  const DefaultSelected: PayeeConfig = {
+    destination: null,
+    account: null,
   };
 
-  // bond valid
-  const [valid, setValid] = useState<boolean>(false);
+  // Store the current user-inputted custom payout account.
+  const [account, setAccount] = useState<MaybeAccount>(payee.account);
 
-  // tx to submit
-  const tx = () => {
-    let _tx = null;
+  // Store the currently selected payee option.
+  const [selected, setSelected]: any = useState<PayeeConfig>(DefaultSelected);
 
-    if (!api || !valid) {
-      return _tx;
+  // update setup progress with payee config.
+  const handleChangeDestination = (destination: PayeeOptions) => {
+    setSelected({ destination, account });
+  };
+
+  // update setup progress with payee account.
+  const handleChangeAccount = (newAccount: MaybeAccount) => {
+    setSelected({
+      destination: selected?.destination ?? null,
+      account: newAccount,
+    });
+  };
+
+  // determine whether this section is completed.
+  const isComplete = () =>
+    selected.destination !== null &&
+    !(selected.destination === 'Account' && selected.account === null);
+
+  // Tx to submit.
+  const getTx = () => {
+    let tx = null;
+
+    if (!api || !isComplete()) {
+      return tx;
     }
+    const payeeToSubmit =
+      selected.destination === 'Account'
+        ? {
+            Account: selected.account,
+          }
+        : selected.destination;
 
-    _tx = api.tx.staking.setPayee(selected.key);
-    return _tx;
+    tx = api.tx.staking.setPayee(payeeToSubmit);
+    return tx;
   };
 
   const { submitTx, submitting } = useSubmitExtrinsic({
-    tx: tx(),
+    tx: getTx(),
     from: controller,
-    shouldSubmit: valid,
+    shouldSubmit: isComplete(),
     callbackSubmit: () => {
       setModalStatus(2);
     },
     callbackInBlock: () => {},
   });
 
-  // remove active payee option from selectable items
-  const payeeItems = PAYEE_STATUS.filter((item) => {
-    return item.key !== _selected.key;
-  });
+  // Reset selected value on account change.
+  useEffect(() => {
+    setSelected(DefaultSelected);
+  }, [activeAccount]);
+
+  // Inject default value after component mount.
+  useEffect(() => {
+    const initialSelected = getPayeeItems(true).find(
+      (item) => item.value === payee.destination
+    );
+    setSelected(
+      initialSelected
+        ? {
+            destination: initialSelected.value,
+            account,
+          }
+        : DefaultSelected
+    );
+  }, []);
+
+  // Ensure selected item is valid on change.
+  useEffect(() => {}, [selected]);
 
   return (
     <>
-      <Title title="Update Reward Destination" icon={faWallet} />
-      <PaddingWrapper verticalOnly>
-        <div
-          style={{
-            padding: '0 1.25rem',
-            marginTop: '1rem',
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
-          {getControllerNotImported(controller) && (
-            <Warning text="You must have your controller account imported to update your reward destination" />
-          )}
-          <Dropdown
-            items={payeeItems}
-            onChange={handleOnChange}
-            placeholder="Reward Destination"
-            value={selected}
-            current={_selected}
-            height="17rem"
+      <Title
+        title={t('updatePayoutDestination')}
+        helpKey="Payout Destination"
+      />
+      <PaddingWrapper style={{ paddingBottom: 0 }}>
+        {getControllerNotImported(controller) && (
+          <WarningsWrapper noMargin>
+            <Warning text={t('mustHaveControllerUpdate')} />
+          </WarningsWrapper>
+        )}
+        <div style={{ width: '100%', padding: '0 0.5rem' }}>
+          <PayeeInput
+            payee={selected}
+            account={account}
+            setAccount={setAccount}
+            handleChange={handleChangeAccount}
           />
-          <div style={{ marginTop: '1rem' }}>
-            <EstimatedTxFee />
-          </div>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => submitTx()}
-                disabled={
-                  !valid ||
-                  submitting ||
-                  getControllerNotImported(controller) ||
-                  !txFeesValid
-                }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
         </div>
+        <SelectItems>
+          {getPayeeItems(true).map((item: PayeeItem) => (
+            <SelectItem
+              key={`payee_option_${item.value}`}
+              account={account}
+              setAccount={setAccount}
+              selected={selected.destination === item.value}
+              onClick={() => handleChangeDestination(item.value)}
+              {...item}
+            />
+          ))}
+        </SelectItems>
       </PaddingWrapper>
+      <SubmitTx
+        fromController
+        buttons={[
+          <ButtonSubmit
+            key="button_submit"
+            text={`${submitting ? t('submitting') : t('submit')}`}
+            iconLeft={faArrowAltCircleUp}
+            iconTransform="grow-2"
+            onClick={() => submitTx()}
+            disabled={
+              !isComplete() ||
+              submitting ||
+              getControllerNotImported(controller) ||
+              !txFeesValid
+            }
+          />,
+        ]}
+      />
     </>
   );
 };
-
-export default UpdatePayee;

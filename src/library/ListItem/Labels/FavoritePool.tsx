@@ -1,0 +1,70 @@
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
+// SPDX-License-Identifier: Apache-2.0
+
+import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
+import { faHeart } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useNotifications } from 'contexts/Notifications';
+import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
+import { useTooltip } from 'contexts/Tooltip';
+import { TooltipPosition, TooltipTrigger } from 'library/ListItem/Wrappers';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { FavoriteProps } from '../types';
+
+export const FavoritePool = ({ address }: FavoriteProps) => {
+  const { t } = useTranslation('library');
+  const { addNotification } = useNotifications();
+  const { favorites, addFavorite, removeFavorite } = usePoolsConfig();
+  const { setTooltipPosition, setTooltipMeta, open } = useTooltip();
+
+  const isFavorite = favorites.includes(address);
+
+  const notificationFavorite = !isFavorite
+    ? {
+        title: t('favoritePoolAdded'),
+        subtitle: address,
+      }
+    : {
+        title: t('favoritePoolRemoved'),
+        subtitle: address,
+      };
+
+  const posRef = useRef<HTMLDivElement>(null);
+
+  const tooltipText = `${isFavorite ? `${t('remove')}` : `${t('add')}`} ${t(
+    'favorite'
+  )}`;
+
+  const toggleTooltip = () => {
+    if (!open) {
+      setTooltipMeta(tooltipText);
+      setTooltipPosition(posRef);
+    }
+  };
+
+  return (
+    <div className="label pool">
+      <TooltipTrigger
+        className="tooltip-trigger-element as-button"
+        data-tooltip-text={tooltipText}
+        onMouseMove={() => toggleTooltip()}
+        onClick={() => {
+          if (isFavorite) {
+            removeFavorite(address);
+          } else {
+            addFavorite(address);
+          }
+          addNotification(notificationFavorite);
+        }}
+      />
+      <TooltipPosition ref={posRef} />
+      <button type="button" className={isFavorite ? 'active' : undefined}>
+        <FontAwesomeIcon
+          icon={!isFavorite ? faHeartRegular : faHeart}
+          transform="shrink-2"
+        />
+      </button>
+    </div>
+  );
+};

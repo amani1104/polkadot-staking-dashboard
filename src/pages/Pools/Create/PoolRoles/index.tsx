@@ -1,25 +1,26 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
 import { useConnect } from 'contexts/Connect';
-import { useUi } from 'contexts/UI';
-import { SetupStepProps } from 'library/SetupSteps/types';
-import { SetupType } from 'contexts/UI/types';
-import { Header } from 'library/SetupSteps/Header';
+import { useSetup } from 'contexts/Setup';
 import { Footer } from 'library/SetupSteps/Footer';
+import { Header } from 'library/SetupSteps/Header';
 import { MotionContainer } from 'library/SetupSteps/MotionContainer';
+import type { SetupStepProps } from 'library/SetupSteps/types';
+import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Roles } from '../../Roles';
 
-export const PoolRoles = (props: SetupStepProps) => {
-  const { section } = props;
+export const PoolRoles = ({ section }: SetupStepProps) => {
+  const { t } = useTranslation('pages');
   const { activeAccount } = useConnect();
-  const { getSetupProgress, setActiveAccountSetup } = useUi();
-  const setup = getSetupProgress(SetupType.Pool, activeAccount);
+  const { getSetupProgress, setActiveAccountSetup } = useSetup();
+  const setup = getSetupProgress('pool', activeAccount);
+  const { progress } = setup;
 
   // if no roles in setup already, inject `activeAccount` to be
   // root and depositor roles.
-  const initialValue = setup.roles ?? {
+  const initialValue = progress.roles ?? {
     root: activeAccount,
     depositor: activeAccount,
     nominator: activeAccount,
@@ -36,7 +37,7 @@ export const PoolRoles = (props: SetupStepProps) => {
 
   // handler for updating pool roles
   const handleSetupUpdate = (value: any) => {
-    setActiveAccountSetup(SetupType.Pool, value);
+    setActiveAccountSetup('pool', value);
   };
 
   // update pool roles on account change
@@ -50,8 +51,8 @@ export const PoolRoles = (props: SetupStepProps) => {
   useEffect(() => {
     // only update if this section is currently active
     if (setup.section === section) {
-      setActiveAccountSetup(SetupType.Pool, {
-        ...setup,
+      setActiveAccountSetup('pool', {
+        ...progress,
         roles: initialValue,
       });
     }
@@ -61,17 +62,23 @@ export const PoolRoles = (props: SetupStepProps) => {
     <>
       <Header
         thisSection={section}
-        complete={setup.roles !== null}
-        title="Roles"
-        // helpKey="Bonding"
-        setupType={SetupType.Pool}
+        complete={progress.roles !== null}
+        title={`${t('pools.roles')}`}
+        helpKey="Pool Roles"
+        bondFor="pool"
       />
       <MotionContainer thisSection={section} activeSection={setup.section}>
         <h4 style={{ margin: '0.5rem 0' }}>
-          You will consume your pool&apos;s Root and Depositor roles.
+          <Trans
+            defaults={`${t('pools.poolCreator')}`}
+            components={{ b: <b /> }}
+          />
         </h4>
         <h4 style={{ marginTop: 0 }}>
-          Your Nominator and State Toggler roles can be assigned to any account.
+          <Trans
+            defaults={`${t('pools.assignedToAnyAccount')}`}
+            components={{ b: <b /> }}
+          />
         </h4>
         <Roles
           batchKey="pool_roles_create"
@@ -80,7 +87,7 @@ export const PoolRoles = (props: SetupStepProps) => {
           setters={[
             {
               set: handleSetupUpdate,
-              current: setup,
+              current: progress,
             },
             {
               set: setRoles,
@@ -88,7 +95,7 @@ export const PoolRoles = (props: SetupStepProps) => {
             },
           ]}
         />
-        <Footer complete={rolesValid} setupType={SetupType.Pool} />
+        <Footer complete={rolesValid} bondFor="pool" />
       </MotionContainer>
     </>
   );

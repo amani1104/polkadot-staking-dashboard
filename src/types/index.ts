@@ -1,49 +1,31 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { FunctionComponent, SVGProps } from 'react';
-import type { WellKnownChain } from '@polkadot/rpc-provider/substrate-connect';
-import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { PageProps } from 'pages/types';
-import { AnyJson } from '@polkadot/types-codec/types';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import type { Theme } from 'contexts/Themes/types';
+import type { PageProps } from 'pages/types';
+import type React from 'react';
+import type { FunctionComponent, SVGProps } from 'react';
 
-export type Fn = () => void;
-
-export enum NetworkName {
-  Polkadot = 'polkadot',
-  Kusama = 'kusama',
-  Westend = 'westend',
-}
-
-export enum Toggle {
-  Open = 'open',
-  Closed = 'closed',
-}
+export type NetworkName = 'polkadot' | 'kusama' | 'westend';
 
 export interface Networks {
   [key: string]: Network;
 }
 
+type NetworkColor =
+  | 'primary'
+  | 'secondary'
+  | 'stroke'
+  | 'transparent'
+  | 'pending';
 export interface Network {
   name: string;
   endpoints: {
     rpc: string;
-    lightClient: WellKnownChain;
+    lightClient: AnyApi;
   };
-  colors: {
-    primary: {
-      light: string;
-      dark: string;
-    };
-    secondary: {
-      light: string;
-      dark: string;
-    };
-    transparent: {
-      light: string;
-      dark: string;
-    };
-  };
+  colors: Record<NetworkColor, { [key in Theme]: string }>;
   subscanEndpoint: string;
   unit: string;
   units: number;
@@ -73,15 +55,15 @@ export interface Network {
 }
 
 export interface PageCategory {
-  _id: number;
-  title: string;
+  id: number;
+  key: string;
 }
 
 export type PageCategories = Array<PageCategory>;
 
 export interface PageItem {
   category: number;
-  title: string;
+  key: string;
   uri: string;
   hash: string;
   Entry: React.FC<PageProps>;
@@ -100,17 +82,23 @@ export type MaybeAccount = string | null;
 
 export type MaybeString = string | null;
 
+// track the status of a syncing / fetching process.
+export type Sync = 'unsynced' | 'syncing' | 'synced';
+
+// track whether bonding should be for nominator or nomination pool.
+export type BondFor = 'pool' | 'nominator';
+
+// generic function with no args or return type.
+export type Fn = () => void;
+
 // any types to compress compiler warnings
 // eslint-disable-next-line
 export type AnyApi = any;
 // eslint-disable-next-line
+export type AnyJson = any;
+// eslint-disable-next-line
+export type AnyFunction = any;
+// eslint-disable-next-line
 export type AnyMetaBatch = any;
 // eslint-disable-next-line
 export type AnySubscan = any;
-
-// track the status of a syncing / fetching process.
-export enum Sync {
-  Unsynced,
-  Syncing,
-  Synced,
-}

@@ -1,76 +1,71 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { useState } from 'react';
-import { useModal } from 'contexts/Modal';
+import { faArrowAltCircleUp } from '@fortawesome/free-solid-svg-icons';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
-import { planckBnToUnit, rmCommas } from 'Utils';
-import {
-  NotesWrapper,
-  PaddingWrapper,
-  Separator,
-  FooterWrapper,
-} from 'modals/Wrappers';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowAltCircleUp, faMinus } from '@fortawesome/free-solid-svg-icons';
-import { Warning } from 'library/Form/Warning';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { ContentWrapper } from 'modals/UpdateBond/Wrappers';
+import { useModal } from 'contexts/Modal';
 import { useNetworkMetrics } from 'contexts/Network';
-import { useStaking } from 'contexts/Staking';
 import { usePoolMembers } from 'contexts/Pools/PoolMembers';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
 import { useTxFees } from 'contexts/TxFees';
-import { Title } from 'library/Modal/Title';
+import { Warning } from 'library/Form/Warning';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
+import { Action } from 'library/Modal/Action';
+import { Close } from 'library/Modal/Close';
+import { SubmitTx } from 'library/SubmitTx';
+import { PaddingWrapper, WarningsWrapper } from 'modals/Wrappers';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { isNotZero, planckToUnit, rmCommas } from 'Utils';
 
 export const WithdrawPoolMember = () => {
-  const { api, network } = useApi();
+  const { t } = useTranslation('modals');
+  const { api, network, consts } = useApi();
   const { activeAccount, accountHasSigner } = useConnect();
-  const { staking } = useStaking();
   const { setStatus: setModalStatus, config } = useModal();
-  const { metrics } = useNetworkMetrics();
+  const { activeEra } = useNetworkMetrics();
   const { removePoolMember } = usePoolMembers();
   const { txFeesValid } = useTxFees();
 
-  const { activeEra } = metrics;
   const { member, who } = config;
-  const { historyDepth } = staking;
+  const { historyDepth } = consts;
   const { unbondingEras, points } = member;
 
   // calculate total for withdraw
-  let totalWithdrawBase: BN = new BN(0);
+  let totalWithdrawUnit = new BigNumber(0);
 
   Object.entries(unbondingEras).forEach((entry: any) => {
     const [era, amount] = entry;
     if (activeEra.index > era) {
-      totalWithdrawBase = totalWithdrawBase.add(new BN(rmCommas(amount)));
+      totalWithdrawUnit = totalWithdrawUnit.plus(
+        new BigNumber(rmCommas(amount))
+      );
     }
   });
 
-  const bonded = planckBnToUnit(new BN(rmCommas(points)), network.units);
+  const bonded = planckToUnit(new BigNumber(rmCommas(points)), network.units);
 
-  const totalWithdraw = planckBnToUnit(
-    new BN(totalWithdrawBase),
+  const totalWithdraw = planckToUnit(
+    new BigNumber(totalWithdrawUnit),
     network.units
   );
 
   // valid to submit transaction
-  const [valid] = useState<boolean>(totalWithdraw > 0 ?? false);
+  const [valid] = useState<boolean>(isNotZero(totalWithdraw) ?? false);
 
   // tx to submit
-  const tx = () => {
-    let _tx = null;
+  const getTx = () => {
+    let tx = null;
     if (!valid || !api) {
-      return _tx;
+      return tx;
     }
-    _tx = api.tx.nominationPools.withdrawUnbonded(who, historyDepth);
-    return _tx;
+    tx = api.tx.nominationPools.withdrawUnbonded(who, historyDepth.toString());
+    return tx;
   };
   const { submitTx, submitting } = useSubmitExtrinsic({
-    tx: tx(),
+    tx: getTx(),
     from: activeAccount,
     shouldSubmit: valid,
     callbackSubmit: () => {
@@ -78,7 +73,7 @@ export const WithdrawPoolMember = () => {
     },
     callbackInBlock: () => {
       // remove the pool member from context if no more funds bonded
-      if (bonded === 0) {
+      if (bonded.isZero()) {
         removePoolMember(who);
       }
     },
@@ -86,46 +81,33 @@ export const WithdrawPoolMember = () => {
 
   return (
     <>
-      <Title title="Withdraw Member Funds" icon={faMinus} />
-      <PaddingWrapper verticalOnly />
-      <ContentWrapper>
-        <div>
-          <div>
-            {!accountHasSigner(activeAccount) && (
-              <Warning text="Your account is read only, and cannot sign transactions." />
-            )}
-            <h2>
-              Withdraw {totalWithdraw} {network.unit}
-            </h2>
-
-            <Separator />
-            <NotesWrapper>
-              <EstimatedTxFee />
-            </NotesWrapper>
-          </div>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => submitTx()}
-                disabled={
-                  !valid ||
-                  submitting ||
-                  !accountHasSigner(activeAccount) ||
-                  !txFeesValid
-                }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
-        </div>
-      </ContentWrapper>
+      <Close />
+      <PaddingWrapper>
+        <h2 className="title">{t('withdrawMemberFunds')}</h2>
+        <Action text={`${t('withdraw')} ${totalWithdraw} ${network.unit}`} />
+        {!accountHasSigner(activeAccount) ? (
+          <WarningsWrapper>
+            <Warning text={t('readOnly')} />
+          </WarningsWrapper>
+        ) : null}
+      </PaddingWrapper>
+      <SubmitTx
+        buttons={[
+          <ButtonSubmit
+            key="button_submit"
+            text={`${submitting ? t('submitting') : t('submit')}`}
+            iconLeft={faArrowAltCircleUp}
+            iconTransform="grow-2"
+            onClick={() => submitTx()}
+            disabled={
+              !valid ||
+              submitting ||
+              !accountHasSigner(activeAccount) ||
+              !txFeesValid
+            }
+          />,
+        ]}
+      />
     </>
   );
 };

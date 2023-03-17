@@ -1,20 +1,26 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { motion } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExternalLinkAlt as faExt } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { motion } from 'framer-motion';
+import { useCallback } from 'react';
 import { ItemWrapper } from '../Wrappers';
 
-export const External = (props: any) => {
-  const { width, height, subtitle, label, title, url, website } = props;
-
-  const handleClick = () => {
+export const External = ({
+  width,
+  height,
+  subtitle,
+  title,
+  url,
+  website,
+}: any) => {
+  const handleClick = useCallback(() => {
     window.open(url, '_blank');
-  };
+  }, [url]);
 
   return (
-    <ItemWrapper width={`${width}%`} height={height || 'auto'}>
+    <ItemWrapper width={`${width}`} height={height || 'auto'}>
       <motion.button
         className="item"
         whileHover={{ scale: 1.004 }}
@@ -36,5 +42,3 @@ export const External = (props: any) => {
     </ItemWrapper>
   );
 };
-
-export default External;

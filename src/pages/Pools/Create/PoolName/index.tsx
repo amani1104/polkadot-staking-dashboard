@@ -1,23 +1,24 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
 import { useConnect } from 'contexts/Connect';
-import { useUi } from 'contexts/UI';
-import { SetupStepProps } from 'library/SetupSteps/types';
-import { SetupType } from 'contexts/UI/types';
-import { Header } from 'library/SetupSteps/Header';
+import { useSetup } from 'contexts/Setup';
 import { Footer } from 'library/SetupSteps/Footer';
+import { Header } from 'library/SetupSteps/Header';
 import { MotionContainer } from 'library/SetupSteps/MotionContainer';
+import type { SetupStepProps } from 'library/SetupSteps/types';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from './Input';
 
-export const PoolName = (props: SetupStepProps) => {
-  const { section } = props;
+export const PoolName = ({ section }: SetupStepProps) => {
+  const { t } = useTranslation('pages');
   const { activeAccount } = useConnect();
-  const { getSetupProgress, setActiveAccountSetup } = useUi();
-  const setup = getSetupProgress(SetupType.Pool, activeAccount);
+  const { getSetupProgress, setActiveAccountSetup } = useSetup();
+  const setup = getSetupProgress('pool', activeAccount);
+  const { progress } = setup;
 
-  const initialValue = setup.metadata;
+  const initialValue = progress.metadata;
 
   // store local pool name for form control
   const [metadata, setMetadata] = useState({
@@ -29,7 +30,7 @@ export const PoolName = (props: SetupStepProps) => {
 
   // handler for updating bond
   const handleSetupUpdate = (value: any) => {
-    setActiveAccountSetup(SetupType.Pool, value);
+    setActiveAccountSetup('pool', value);
   };
 
   // update bond on account change
@@ -43,8 +44,8 @@ export const PoolName = (props: SetupStepProps) => {
   useEffect(() => {
     // only update if this section is currently active
     if (setup.section === section) {
-      setActiveAccountSetup(SetupType.Pool, {
-        ...setup,
+      setActiveAccountSetup('pool', {
+        ...progress,
         metadata: initialValue,
       });
     }
@@ -54,10 +55,10 @@ export const PoolName = (props: SetupStepProps) => {
     <>
       <Header
         thisSection={section}
-        complete={setup.metadata !== ''}
-        title="Pool Name"
+        complete={progress.metadata !== ''}
+        title={`${t('pools.poolName')}`}
         // helpKey="Bonding"
-        setupType={SetupType.Pool}
+        bondFor="pool"
       />
       <MotionContainer thisSection={section} activeSection={setup.section}>
         <Input
@@ -66,7 +67,7 @@ export const PoolName = (props: SetupStepProps) => {
           setters={[
             {
               set: handleSetupUpdate,
-              current: setup,
+              current: progress,
             },
             {
               set: setMetadata,
@@ -74,7 +75,7 @@ export const PoolName = (props: SetupStepProps) => {
             },
           ]}
         />
-        <Footer complete={valid} setupType={SetupType.Pool} />
+        <Footer complete={valid} bondFor="pool" />
       </MotionContainer>
     </>
   );

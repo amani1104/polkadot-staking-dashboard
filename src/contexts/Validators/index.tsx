@@ -1,33 +1,30 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  sleep,
-  shuffle,
-  removePercentage,
-  rmCommas,
-  setStateWithRef,
-  planckBnToUnit,
-  toFixedIfNecessary,
-} from 'Utils';
-import { AnyApi, AnyMetaBatch, Fn } from 'types';
-import { MIN_BOND_PRECISION } from 'consts';
-import {
+import BigNumber from 'bignumber.js';
+import { VALIDATOR_COMMUNITY } from 'config/validators';
+import type {
   SessionParachainValidators,
   SessionValidators,
   Validator,
   ValidatorAddresses,
   ValidatorsContextInterface,
 } from 'contexts/Validators/types';
-import { VALIDATOR_COMMUNITY } from 'config/validators';
+import React, { useEffect, useRef, useState } from 'react';
+import type { AnyApi, AnyMetaBatch, Fn } from 'types';
+import {
+  greaterThanZero,
+  planckToUnit,
+  rmCommas,
+  setStateWithRef,
+  shuffle,
+} from 'Utils';
+import { useBalances } from '../Accounts/Balances';
 import { useApi } from '../Api';
 import { useConnect } from '../Connect';
 import { useNetworkMetrics } from '../Network';
-import { useBalances } from '../Balances';
-import * as defaults from './defaults';
 import { useActivePools } from '../Pools/ActivePools';
+import * as defaults from './defaults';
 
 export const ValidatorsContext =
   React.createContext<ValidatorsContextInterface>(
@@ -44,12 +41,12 @@ export const ValidatorsProvider = ({
 }) => {
   const { isReady, api, network, consts } = useApi();
   const { activeAccount } = useConnect();
-  const { metrics } = useNetworkMetrics();
-  const { accounts, getAccountNominations } = useBalances();
+  const { activeEra, metrics } = useNetworkMetrics();
+  const { balances, getAccountNominations } = useBalances();
   const { poolNominations } = useActivePools();
   const { units } = network;
   const { maxNominatorRewardedPerValidator } = consts;
-  const { activeEra, earliestStoredSession } = metrics;
+  const { earliestStoredSession } = metrics;
 
   // stores the total validator entries
   const [validators, setValidators] = useState<Array<Validator>>([]);
@@ -81,16 +78,14 @@ export const ValidatorsProvider = ({
   }>({});
   const validatorSubsRef = useRef(validatorSubs);
 
-  // get favourites from local storage
-  const getFavourites = () => {
-    const _favourites = localStorage.getItem(
-      `${network.name.toLowerCase()}_favourites`
-    );
-    return _favourites !== null ? JSON.parse(_favourites) : [];
+  // get favorites from local storage
+  const getFavorites = () => {
+    const localFavourites = localStorage.getItem(`${network.name}_favorites`);
+    return localFavourites !== null ? JSON.parse(localFavourites) : [];
   };
 
-  // stores the user's favourite validators
-  const [favourites, setFavourites] = useState<string[]>(getFavourites());
+  // stores the user's favorite validators
+  const [favorites, setFavorites] = useState<string[]>(getFavorites());
 
   // stores the user's nominated validators as list
   const [nominated, setNominated] = useState<Array<Validator> | null>(null);
@@ -100,15 +95,14 @@ export const ValidatorsProvider = ({
     null
   );
 
-  // stores the user's favourites validators as list
-  const [favouritesList, setFavouritesList] = useState<Array<Validator> | null>(
+  // stores the user's favorites validators as list
+  const [favoritesList, setFavoritesList] = useState<Array<Validator> | null>(
     null
   );
 
-  // stores a shuffled validator community
-  const [validatorCommunity, setValidatorCommunity] = useState<any>(
-    shuffle(VALIDATOR_COMMUNITY)
-  );
+  // stores validator community
+
+  const [validatorCommunity] = useState<any>([...shuffle(VALIDATOR_COMMUNITY)]);
 
   // reset validators list on network change
   useEffect(() => {
@@ -124,23 +118,21 @@ export const ValidatorsProvider = ({
   useEffect(() => {
     if (isReady) {
       fetchValidators();
-      subscribeSessionValidators(api);
+      subscribeSessionValidators();
     }
 
     return () => {
       // unsubscribe from any validator meta batches
-      Object.values(validatorSubsRef.current).map((batch: AnyMetaBatch) => {
-        return Object.entries(batch).map(([, v]: AnyApi) => {
-          return v();
-        });
-      });
+      Object.values(validatorSubsRef.current).map((batch: AnyMetaBatch) =>
+        Object.entries(batch).map(([, v]: AnyApi) => v())
+      );
     };
   }, [isReady, activeEra]);
 
   // fetch parachain session validators when earliestStoredSession ready
   useEffect(() => {
-    if (isReady && earliestStoredSession.gt(new BN(0))) {
-      subscribeParachainValidators(api);
+    if (isReady && greaterThanZero(earliestStoredSession)) {
+      subscribeParachainValidators();
     }
   }, [isReady, earliestStoredSession]);
 
@@ -156,7 +148,7 @@ export const ValidatorsProvider = ({
     if (isReady && activeAccount) {
       fetchNominatedList();
     }
-  }, [isReady, activeAccount, accounts]);
+  }, [isReady, activeAccount, balances]);
 
   const fetchNominatedList = async () => {
     if (!activeAccount) {
@@ -166,17 +158,16 @@ export const ValidatorsProvider = ({
     const targets = getAccountNominations(activeAccount);
 
     // format to list format
-    const targetsFormatted = targets.map((item: any) => {
-      return { address: item };
-    });
+    const targetsFormatted = targets.map((item: any) => ({ address: item }));
     // fetch preferences
     const nominationsWithPrefs = await fetchValidatorPrefs(targetsFormatted);
-
     if (nominationsWithPrefs) {
       setNominated(nominationsWithPrefs);
-    } else {
-      setNominated([]);
+      return;
     }
+
+    // return empty otherwise.
+    setNominated([]);
   };
 
   // fetch active account's pool nominations in validator list format
@@ -190,9 +181,7 @@ export const ValidatorsProvider = ({
     // get raw nominations list
     let n = poolNominations.targets;
     // format to list format
-    n = n.map((item: string) => {
-      return { address: item };
-    });
+    n = n.map((item: string) => ({ address: item }));
     // fetch preferences
     const nominationsWithPrefs = await fetchValidatorPrefs(n);
     if (nominationsWithPrefs) {
@@ -202,31 +191,29 @@ export const ValidatorsProvider = ({
     }
   };
 
-  // re-fetch favourites upon network change
-  // re-shuffle validator community on network change
+  // re-fetch favorites on network change
   useEffect(() => {
-    setFavourites(getFavourites());
-    setValidatorCommunity(shuffle(VALIDATOR_COMMUNITY));
+    setFavorites(getFavorites());
   }, [network]);
 
-  // fetch favourites in validator list format
+  // fetch favorites in validator list format
   useEffect(() => {
     if (isReady) {
-      fetchFavouriteList();
+      fetchFavoriteList();
     }
-  }, [isReady, favourites]);
+  }, [isReady, favorites]);
 
-  const fetchFavouriteList = async () => {
+  const fetchFavoriteList = async () => {
     // format to list format
-    const _favourites = [...favourites].map((item: string) => {
-      return { address: item };
-    });
+    const _favorites = [...favorites].map((item: string) => ({
+      address: item,
+    }));
     // // fetch preferences
-    const favouritesWithPrefs = await fetchValidatorPrefs(_favourites);
-    if (favouritesWithPrefs) {
-      setFavouritesList(favouritesWithPrefs);
+    const favoritesWithPrefs = await fetchValidatorPrefs(_favorites);
+    if (favoritesWithPrefs) {
+      setFavoritesList(favoritesWithPrefs);
     } else {
-      setFavouritesList([]);
+      setFavoritesList([]);
     }
   };
 
@@ -248,40 +235,41 @@ export const ValidatorsProvider = ({
 
     // fetch validator set
     const v: Array<Validator> = [];
-    let totalNonAllCommission: BN = new BN(0);
+    let totalNonAllCommission = new BigNumber(0);
     const exposures = await api.query.staking.validators.entries();
-    exposures.forEach(([_args, _prefs]: AnyApi) => {
-      const address = _args.args[0].toHuman();
-      const prefs = _prefs.toHuman();
+    exposures.forEach(([a, p]: AnyApi) => {
+      const address = a.args[0].toHuman();
+      const prefs = p.toHuman();
 
-      const _commission = removePercentage(prefs.commission);
-      if (_commission !== 100) {
-        totalNonAllCommission = totalNonAllCommission.add(new BN(_commission));
+      const commission = new BigNumber(prefs.commission.slice(0, -1));
+
+      if (!commission.isEqualTo(100)) {
+        totalNonAllCommission = totalNonAllCommission.plus(commission);
       }
 
       v.push({
         address,
         prefs: {
-          commission: parseFloat(_commission.toFixed(2)),
+          commission: Number(commission.toFixed(2)),
           blocked: prefs.blocked,
         },
       });
     });
 
     // get average network commission for all non-100% commissioned validators.
-    const nonCommissionCount = exposures.filter(
+    const notFullCommissionCount = exposures.filter(
       (e: AnyApi) => e.commission !== '100%'
     ).length;
 
-    const _avgCommission = nonCommissionCount
-      ? toFixedIfNecessary(
-          totalNonAllCommission.toNumber() / nonCommissionCount,
-          2
-        )
+    const average = notFullCommissionCount
+      ? totalNonAllCommission
+          .dividedBy(notFullCommissionCount)
+          .decimalPlaces(2)
+          .toNumber()
       : 0;
 
     setFetchedValidators(2);
-    setAvgCommission(_avgCommission);
+    setAvgCommission(average);
     // shuffle validators before setting them.
     setValidators(shuffle(v));
   };
@@ -289,31 +277,29 @@ export const ValidatorsProvider = ({
   /*
    * subscribe to active session
    */
-  const subscribeSessionValidators = async (_api: AnyApi) => {
-    if (isReady) {
-      const unsub = await _api.query.session.validators(
-        (_validators: AnyApi) => {
-          setSessionValidators({
-            ...sessionValidators,
-            list: _validators.toHuman(),
-            unsub,
-          });
-        }
-      );
+  const subscribeSessionValidators = async () => {
+    if (api !== null && isReady) {
+      const unsub: AnyApi = await api.query.session.validators((v: AnyApi) => {
+        setSessionValidators({
+          ...sessionValidators,
+          list: v.toHuman(),
+          unsub,
+        });
+      });
     }
   };
 
   /*
    * subscribe to active parachain validators
    */
-  const subscribeParachainValidators = async (_api: AnyApi) => {
-    if (isReady) {
-      const unsub = await _api.query.paraSessionInfo.accountKeys(
+  const subscribeParachainValidators = async () => {
+    if (api !== null && isReady) {
+      const unsub: AnyApi = await api.query.paraSessionInfo.accountKeys(
         earliestStoredSession.toString(),
-        (_validators: AnyApi) => {
+        (v: AnyApi) => {
           setSessionParachainValidators({
             ...sessionParachainValidators,
-            list: _validators.toHuman(),
+            list: v.toHuman(),
             unsub,
           });
         }
@@ -324,29 +310,27 @@ export const ValidatorsProvider = ({
   /*
    * fetches prefs for a list of validators
    */
-  const fetchValidatorPrefs = async (_validators: ValidatorAddresses) => {
-    if (!_validators.length || !api) {
+  const fetchValidatorPrefs = async (addresses: ValidatorAddresses) => {
+    if (!addresses.length || !api) {
       return null;
     }
 
     const v: string[] = [];
-    for (const _v of _validators) {
-      v.push(_v.address);
+    for (const address of addresses) {
+      v.push(address.address);
     }
 
-    const prefsAll = await api.query.staking.validators.multi(v);
+    const allPrefs = await api.query.staking.validators.multi(v);
 
     const validatorsWithPrefs = [];
     let i = 0;
-    for (const _prefs of prefsAll) {
-      const prefs: AnyApi = _prefs.toHuman();
-
-      const commission = removePercentage(prefs?.commission ?? '0%');
+    for (const p of allPrefs) {
+      const prefs: AnyApi = p.toHuman();
 
       validatorsWithPrefs.push({
         address: v[i],
         prefs: {
-          commission,
+          commission: prefs?.commission.slice(0, -1) ?? '0',
           blocked: prefs.blocked,
         },
       });
@@ -390,8 +374,15 @@ export const ValidatorsProvider = ({
       }
     } else {
       // tidy up if existing batch exists
-      delete validatorMetaBatches[key];
-      delete validatorMetaBatchesRef.current[key];
+      const updatedValidatorMetaBatches: AnyMetaBatch = {
+        ...validatorMetaBatchesRef.current,
+      };
+      delete updatedValidatorMetaBatches[key];
+      setStateWithRef(
+        updatedValidatorMetaBatches,
+        setValidatorMetaBatch,
+        validatorMetaBatchesRef
+      );
 
       if (validatorSubsRef.current[key] !== undefined) {
         for (const unsub of validatorSubsRef.current[key]) {
@@ -401,8 +392,8 @@ export const ValidatorsProvider = ({
     }
 
     const addresses = [];
-    for (const _v of v) {
-      addresses.push(_v.address);
+    for (const address of v) {
+      addresses.push(address.address);
     }
 
     // store batch addresses
@@ -499,14 +490,11 @@ export const ValidatorsProvider = ({
       addMetaBatchUnsubs(key, unsubs);
     });
 
-    // intentional throttle to prevent slow render updates.
-    await sleep(250);
-
     // subscribe to validator nominators
     const args: AnyApi = [];
 
     for (let i = 0; i < v.length; i++) {
-      args.push([activeEra.index, v[i].address]);
+      args.push([activeEra.index.toString(), v[i].address]);
     }
 
     const unsub3 = await api.query.staking.erasStakers.multi<AnyApi>(
@@ -518,48 +506,37 @@ export const ValidatorsProvider = ({
           _validator = _validator.toHuman();
           let others = _validator.others ?? [];
 
-          // account for yourself being an additional nominator
+          // account for yourself being an additional nominator.
           const totalNominations = others.length + 1;
 
-          // get lowest active stake for the validator
-          others = others.sort((a: AnyApi, b: AnyApi) => {
-            const x = new BN(rmCommas(a.value));
-            const y = new BN(rmCommas(b.value));
-            return x.sub(y);
-          });
+          // reformat others.value properties from string to BigNumber.
+          others = others.map((other: AnyApi) => ({
+            ...other,
+            value: new BigNumber(rmCommas(other.value)),
+          }));
 
-          const lowestActive =
-            others.length > 0
-              ? toFixedIfNecessary(
-                  planckBnToUnit(new BN(rmCommas(others[0].value)), units),
-                  MIN_BOND_PRECISION
-                )
-              : 0;
+          // sort others lowest first.
+          others = others.sort((a: AnyApi, b: AnyApi) =>
+            a.value.minus(b.value)
+          );
 
           // get the lowest reward stake of the validator, which is
           // the largest index - `maxNominatorRewardedPerValidator`,
           // or the first index if does not exist.
           const lowestRewardIndex = Math.max(
-            others.length - maxNominatorRewardedPerValidator,
+            others.length - maxNominatorRewardedPerValidator.toNumber(),
             0
           );
 
           const lowestReward =
             others.length > 0
-              ? toFixedIfNecessary(
-                  planckBnToUnit(
-                    new BN(rmCommas(others[lowestRewardIndex]?.value)),
-                    units
-                  ),
-                  MIN_BOND_PRECISION
-                )
+              ? planckToUnit(others[lowestRewardIndex]?.value, units)
               : 0;
 
           stake.push({
             total: _validator.total,
             own: _validator.own,
             total_nominations: totalNominations,
-            lowest: lowestActive,
             lowestReward,
           });
         }
@@ -586,12 +563,12 @@ export const ValidatorsProvider = ({
    * Helper function to add mataBatch unsubs by key.
    */
   const addMetaBatchUnsubs = (key: string, unsubs: Array<Fn>) => {
-    const _unsubs = validatorSubsRef.current;
-    const _keyUnsubs = _unsubs[key] ?? [];
+    const newUnsubs = validatorSubsRef.current;
+    const keyUnsubs = newUnsubs[key] ?? [];
 
-    _keyUnsubs.push(...unsubs);
-    _unsubs[key] = _keyUnsubs;
-    setStateWithRef(_unsubs, setValidatorSubs, validatorSubsRef);
+    keyUnsubs.push(...unsubs);
+    newUnsubs[key] = keyUnsubs;
+    setStateWithRef(newUnsubs, setValidatorSubs, validatorSubsRef);
   };
 
   const removeValidatorMetaBatch = (key: string) => {
@@ -601,40 +578,47 @@ export const ValidatorsProvider = ({
         unsub();
       }
       // wipe data
-      delete validatorMetaBatches[key];
-      delete validatorMetaBatchesRef.current[key];
+      const updatedValidatorMetaBatches: AnyMetaBatch = {
+        ...validatorMetaBatchesRef.current,
+      };
+      delete updatedValidatorMetaBatches[key];
+      setStateWithRef(
+        updatedValidatorMetaBatches,
+        setValidatorMetaBatch,
+        validatorMetaBatchesRef
+      );
     }
   };
 
   /*
-   * Adds a favourite validator.
+   * Adds a favorite validator.
    */
-  const addFavourite = (address: string) => {
-    const _favourites: any = Object.assign(favourites);
-    if (!_favourites.includes(address)) {
-      _favourites.push(address);
+  const addFavorite = (address: string) => {
+    const _favorites: any = Object.assign(favorites);
+    if (!_favorites.includes(address)) {
+      _favorites.push(address);
     }
 
     localStorage.setItem(
-      `${network.name.toLowerCase()}_favourites`,
-      JSON.stringify(_favourites)
+      `${network.name}_favorites`,
+      JSON.stringify(_favorites)
     );
-    setFavourites([..._favourites]);
+    setFavorites([..._favorites]);
   };
 
   /*
-   * Removes a favourite validator if they exist.
+   * Removes a favorite validator if they exist.
    */
-  const removeFavourite = (address: string) => {
-    let _favourites = Object.assign(favourites);
-    _favourites = _favourites.filter(
+  const removeFavorite = (address: string) => {
+    let _favorites = Object.assign(favorites);
+    _favorites = _favorites.filter(
       (validator: string) => validator !== address
     );
     localStorage.setItem(
-      `${network.name.toLowerCase()}_favourites`,
-      JSON.stringify(_favourites)
+      `${network.name}_favorites`,
+      JSON.stringify(_favorites)
     );
-    setFavourites([..._favourites]);
+    setFavorites([..._favorites]);
   };
 
   return (
@@ -643,17 +627,17 @@ export const ValidatorsProvider = ({
         fetchValidatorMetaBatch,
         removeValidatorMetaBatch,
         fetchValidatorPrefs,
-        addFavourite,
-        removeFavourite,
+        addFavorite,
+        removeFavorite,
         validators,
         avgCommission,
         meta: validatorMetaBatchesRef.current,
         session: sessionValidators,
         sessionParachain: sessionParachainValidators.list,
-        favourites,
+        favorites,
         nominated,
         poolNominated,
-        favouritesList,
+        favoritesList,
         validatorCommunity,
       }}
     >

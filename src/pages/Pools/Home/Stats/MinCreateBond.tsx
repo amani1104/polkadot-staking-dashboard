@@ -1,23 +1,23 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Number } from 'library/StatBoxList/Number';
-import { planckBnToUnit } from 'Utils';
 import { useApi } from 'contexts/Api';
 import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
+import { Number } from 'library/StatBoxList/Number';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit } from 'Utils';
 
-const MinCreateBondStatBox = () => {
+export const MinCreateBondStat = () => {
+  const { t } = useTranslation('pages');
   const { network } = useApi();
   const { units } = network;
   const { stats } = usePoolsConfig();
 
   const params = {
-    label: 'Minimum Create Bond',
-    value: planckBnToUnit(stats.minCreateBond, units),
+    label: t('pools.minimumToCreatePool'),
+    value: planckToUnit(stats.minCreateBond, units).toNumber(),
     unit: network.unit,
-    helpKey: 'Minimum Create Bond',
+    helpKey: 'Minimum To Create Pool',
   };
   return <Number {...params} />;
 };
-
-export default MinCreateBondStatBox;

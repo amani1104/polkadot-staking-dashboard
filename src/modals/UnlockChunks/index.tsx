@@ -1,43 +1,41 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect, useRef } from 'react';
-import { faLockOpen } from '@fortawesome/free-solid-svg-icons';
-import { useBalances } from 'contexts/Balances';
+import { useLedgers } from 'contexts/Accounts/Ledgers';
 import { useConnect } from 'contexts/Connect';
 import { useModal } from 'contexts/Modal';
 import { useActivePools } from 'contexts/Pools/ActivePools';
 import { Title } from 'library/Modal/Title';
-import { Wrapper, FixedContentWrapper, CardsWrapper } from './Wrappers';
-import { Overview } from './Overview';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Forms } from './Forms';
+import { Overview } from './Overview';
+import { CardsWrapper, FixedContentWrapper, Wrapper } from './Wrappers';
 
 export const UnlockChunks = () => {
+  const { t } = useTranslation('modals');
   const { activeAccount } = useConnect();
   const { config, setModalHeight } = useModal();
-  const { bondType } = config || {};
-  const { getLedgerForStash } = useBalances();
+  const { bondFor } = config || {};
+  const { getLedgerForStash } = useLedgers();
   const { getPoolUnlocking } = useActivePools();
 
-  // get the unlocking per bondType
-  const _getUnlocking = () => {
+  // get the unlocking per bondFor
+  const getUnlocking = () => {
     let unlocking = [];
     let ledger;
-    switch (bondType) {
-      case 'stake':
-        ledger = getLedgerForStash(activeAccount);
-        unlocking = ledger.unlocking;
-        break;
+    switch (bondFor) {
       case 'pool':
         unlocking = getPoolUnlocking();
         break;
       default:
-      // console.error(`unlocking modal bond-type ${bondType} is not defined.`);
+        ledger = getLedgerForStash(activeAccount);
+        unlocking = ledger.unlocking;
     }
     return unlocking;
   };
 
-  const unlocking = _getUnlocking();
+  const unlocking = getUnlocking();
 
   // active modal section
   const [section, setSection] = useState(0);
@@ -53,28 +51,37 @@ export const UnlockChunks = () => {
   const overviewRef = useRef<HTMLDivElement>(null);
   const formsRef = useRef<HTMLDivElement>(null);
 
-  // resize modal on state change
-  useEffect(() => {
-    let _height = headerRef.current?.clientHeight ?? 0;
+  const getModalHeight = () => {
+    let h = headerRef.current?.clientHeight ?? 0;
 
     if (section === 0) {
-      _height += overviewRef.current?.clientHeight ?? 0;
+      h += overviewRef.current?.clientHeight ?? 0;
     } else {
-      _height += formsRef.current?.clientHeight ?? 0;
+      h += formsRef.current?.clientHeight ?? 0;
     }
-    setModalHeight(_height);
-  }, [task, section]);
+    return h;
+  };
+
+  // resize modal on state change
+  useEffect(() => {
+    setModalHeight(getModalHeight());
+  }, [task, section, unlocking]);
+
+  // resize this modal on window resize
+  useEffect(() => {
+    window.addEventListener('resize', resizeCallback);
+    return () => {
+      window.removeEventListener('resize', resizeCallback);
+    };
+  }, []);
+  const resizeCallback = () => {
+    setModalHeight(getModalHeight());
+  };
 
   return (
     <Wrapper>
       <FixedContentWrapper ref={headerRef}>
-        <Title
-          title={`${unlocking.length > 0 ? `${unlocking.length} ` : ``}Unlock${
-            unlocking.length === 1 ? '' : 's'
-          }`}
-          icon={faLockOpen}
-          fixed
-        />
+        <Title title={t('unlocks')} fixed />
       </FixedContentWrapper>
       <CardsWrapper
         animate={section === 0 ? 'home' : 'next'}
@@ -94,7 +101,7 @@ export const UnlockChunks = () => {
       >
         <Overview
           unlocking={unlocking}
-          bondType={bondType}
+          bondFor={bondFor}
           setSection={setSection}
           setUnlock={setUnlock}
           setTask={setTask}

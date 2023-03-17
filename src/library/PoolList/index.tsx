@@ -1,37 +1,57 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faGripVertical } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ListItemsPerBatch, ListItemsPerPage } from 'consts';
 import { useApi } from 'contexts/Api';
-import { StakingContext } from 'contexts/Staking';
+import { useFilters } from 'contexts/Filters';
 import { useNetworkMetrics } from 'contexts/Network';
-import { LIST_ITEMS_PER_PAGE, LIST_ITEMS_PER_BATCH } from 'consts';
-import { Pool } from 'library/Pool';
-import { List, Header, Wrapper as ListWrapper } from 'library/List';
-import { useTheme } from 'contexts/Themes';
-import { networkColors } from 'theme/default';
 import { useBondedPools } from 'contexts/Pools/BondedPools';
-import { Pagination } from 'library/List/Pagination';
-import { MotionContainer } from 'library/List/MotionContainer';
-import { SearchInput } from 'library/List/SearchInput';
+import { StakingContext } from 'contexts/Staking';
+import { useTheme } from 'contexts/Themes';
 import { useUi } from 'contexts/UI';
+import { motion } from 'framer-motion';
+import { Tabs } from 'library/Filter/Tabs';
+import { usePoolFilters } from 'library/Hooks/usePoolFilters';
+import { Header, List, Wrapper as ListWrapper } from 'library/List';
+import { MotionContainer } from 'library/List/MotionContainer';
+import { Pagination } from 'library/List/Pagination';
+import { SearchInput } from 'library/List/SearchInput';
+import { Pool } from 'library/Pool';
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { isNotZero } from 'Utils';
 import { PoolListProvider, usePoolList } from './context';
-import { PoolListProps } from './types';
+import type { PoolListProps } from './types';
 
-export const PoolListInner = (props: PoolListProps) => {
-  const { allowMoreCols, pagination, batchKey }: any = props;
-  const disableThrottle = props.disableThrottle ?? false;
-  const allowSearch = props.allowSearch ?? false;
-
+export const PoolListInner = ({
+  allowMoreCols,
+  pagination,
+  batchKey = '',
+  disableThrottle,
+  allowSearch,
+  pools,
+  title,
+  defaultFilters,
+}: PoolListProps) => {
+  const { t } = useTranslation('library');
   const { mode } = useTheme();
-  const { isReady, network } = useApi();
-  const { metrics } = useNetworkMetrics();
-  const { fetchPoolsMetaBatch, poolSearchFilter } = useBondedPools();
+  const {
+    isReady,
+    network: { colors },
+  } = useApi();
+  const { activeEra } = useNetworkMetrics();
+  const { fetchPoolsMetaBatch, poolSearchFilter, meta } = useBondedPools();
   const { listFormat, setListFormat } = usePoolList();
   const { isSyncing } = useUi();
+
+  const { getFilters, setMultiFilters, getSearchTerm, setSearchTerm } =
+    useFilters();
+  const { applyFilter } = usePoolFilters();
+  const includes = getFilters('include', 'pools');
+  const excludes = getFilters('exclude', 'pools');
+  const searchTerm = getSearchTerm('pools');
 
   // current page
   const [page, setPage] = useState<number>(1);
@@ -40,10 +60,10 @@ export const PoolListInner = (props: PoolListProps) => {
   const [renderIteration, _setRenderIteration] = useState<number>(1);
 
   // default list of pools
-  const [poolsDefault, setPoolsDefault] = useState(props.pools);
+  const [poolsDefault, setPoolsDefault] = useState(pools);
 
   // manipulated list (ordering, filtering) of pools
-  const [pools, setPools] = useState(props.pools);
+  const [_pools, _setPools] = useState(pools);
 
   // is this the initial fetch
   const [fetched, setFetched] = useState<boolean>(false);
@@ -56,33 +76,33 @@ export const PoolListInner = (props: PoolListProps) => {
   };
 
   // pagination
-  const totalPages = Math.ceil(pools.length / LIST_ITEMS_PER_PAGE);
-  const pageEnd = page * LIST_ITEMS_PER_PAGE - 1;
-  const pageStart = pageEnd - (LIST_ITEMS_PER_PAGE - 1);
+  const totalPages = Math.ceil(_pools.length / ListItemsPerPage);
+  const pageEnd = page * ListItemsPerPage - 1;
+  const pageStart = pageEnd - (ListItemsPerPage - 1);
 
   // render batch
-  const batchEnd = renderIteration * LIST_ITEMS_PER_BATCH - 1;
+  const batchEnd = renderIteration * ListItemsPerBatch - 1;
 
   // refetch list when pool list changes
   useEffect(() => {
-    if (props.pools !== poolsDefault) {
+    if (pools !== poolsDefault) {
       setFetched(false);
     }
-  }, [props.pools]);
+  }, [pools]);
 
   // configure pool list when network is ready to fetch
   useEffect(() => {
-    if (isReady && metrics.activeEra.index !== 0 && !fetched) {
+    if (isReady && isNotZero(activeEra.index) && !fetched) {
       setupPoolList();
     }
-  }, [isReady, fetched, metrics.activeEra.index]);
+  }, [isReady, fetched, activeEra.index]);
 
   // handle pool list bootstrapping
   const setupPoolList = () => {
-    setPoolsDefault(props.pools);
-    setPools(props.pools);
+    setPoolsDefault(pools);
+    _setPools(pools);
     setFetched(true);
-    fetchPoolsMetaBatch(batchKey, props.pools, true);
+    fetchPoolsMetaBatch(batchKey, pools, true);
   };
 
   // render throttle
@@ -94,58 +114,105 @@ export const PoolListInner = (props: PoolListProps) => {
     }
   }, [renderIterationRef.current]);
 
+  // list ui changes / validator changes trigger re-render of list
+  useEffect(() => {
+    // only filter when pool nominations have been synced.
+    if (!isSyncing && meta[batchKey]?.nominations) {
+      handlePoolsFilterUpdate();
+    }
+  }, [isSyncing, includes, excludes, meta]);
+
+  // scroll to top of the window on every filter.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [includes, excludes]);
+
+  // set default filters
+  useEffect(() => {
+    if (defaultFilters?.includes?.length) {
+      setMultiFilters('include', 'pools', defaultFilters?.includes, false);
+    }
+    if (defaultFilters?.excludes?.length) {
+      setMultiFilters('exclude', 'pools', defaultFilters?.excludes, false);
+    }
+  }, []);
+
+  // handle filter / order update
+  const handlePoolsFilterUpdate = (
+    filteredPools: any = Object.assign(poolsDefault)
+  ) => {
+    filteredPools = applyFilter(includes, excludes, filteredPools, batchKey);
+    if (searchTerm) {
+      filteredPools = poolSearchFilter(filteredPools, batchKey, searchTerm);
+    }
+    _setPools(filteredPools);
+    setPage(1);
+    setRenderIteration(1);
+  };
+
   // get pools to render
   let listPools = [];
 
   // get throttled subset or entire list
   if (!disableThrottle) {
-    listPools = pools.slice(pageStart).slice(0, LIST_ITEMS_PER_PAGE);
+    listPools = _pools.slice(pageStart).slice(0, ListItemsPerPage);
   } else {
-    listPools = pools;
+    listPools = _pools;
   }
 
   const handleSearchChange = (e: React.FormEvent<HTMLInputElement>) => {
     const newValue = e.currentTarget.value;
-
     let filteredPools = Object.assign(poolsDefault);
+    filteredPools = applyFilter(includes, excludes, filteredPools, batchKey);
     filteredPools = poolSearchFilter(filteredPools, batchKey, newValue);
 
     // ensure no duplicates
     filteredPools = filteredPools.filter(
       (value: any, index: any, self: any) =>
-        index === self.findIndex((t: any) => t.id === value.id)
+        index === self.findIndex((i: any) => i.id === value.id)
     );
 
     setPage(1);
     setRenderIteration(1);
-    setPools(filteredPools);
+    _setPools(filteredPools);
+    setSearchTerm('pools', newValue);
   };
+
+  const filterTabsConfig = [
+    {
+      label: t('active'),
+      includes: ['active'],
+      excludes: ['locked', 'destroying'],
+    },
+    {
+      label: t('locked'),
+      includes: ['locked'],
+      excludes: [],
+    },
+    {
+      label: t('destroying'),
+      includes: ['destroying'],
+      excludes: [],
+    },
+  ];
 
   return (
     <ListWrapper>
       <Header>
         <div>
-          <h4>{props.title}</h4>
+          <h4>{title}</h4>
         </div>
         <div>
           <button type="button" onClick={() => setListFormat('row')}>
             <FontAwesomeIcon
               icon={faBars}
-              color={
-                listFormat === 'row'
-                  ? networkColors[`${network.name}-${mode}`]
-                  : 'inherit'
-              }
+              color={listFormat === 'row' ? colors.primary[mode] : 'inherit'}
             />
           </button>
           <button type="button" onClick={() => setListFormat('col')}>
             <FontAwesomeIcon
               icon={faGripVertical}
-              color={
-                listFormat === 'col'
-                  ? networkColors[`${network.name}-${mode}`]
-                  : 'inherit'
-              }
+              color={listFormat === 'col' ? colors.primary[mode] : 'inherit'}
             />
           </button>
         </div>
@@ -154,9 +221,10 @@ export const PoolListInner = (props: PoolListProps) => {
         {allowSearch && poolsDefault.length > 0 && (
           <SearchInput
             handleChange={handleSearchChange}
-            placeholder="Search Pool ID, Name or Address"
+            placeholder={t('search')}
           />
         )}
+        <Tabs config={filterTabsConfig} activeIndex={0} />
         {pagination && listPools.length > 0 && (
           <Pagination page={page} total={totalPages} setter={setPage} />
         )}
@@ -193,9 +261,7 @@ export const PoolListInner = (props: PoolListProps) => {
             </>
           ) : (
             <h4 style={{ padding: '1rem 1rem 0 1rem' }}>
-              {isSyncing
-                ? 'Syncing Pool list...'
-                : 'No pools match this criteria.'}
+              {isSyncing ? `${t('syncingPoolList')}...` : t('noMatch')}
             </h4>
           )}
         </MotionContainer>
@@ -204,18 +270,16 @@ export const PoolListInner = (props: PoolListProps) => {
   );
 };
 
-export const PoolList = (props: any) => {
-  return (
-    <PoolListProvider>
-      <PoolListShouldUpdate {...props} />
-    </PoolListProvider>
-  );
-};
+export const PoolList = (props: any) => (
+  <PoolListProvider>
+    <PoolListShouldUpdate {...props} />
+  </PoolListProvider>
+);
 
 export class PoolListShouldUpdate extends React.Component<any, any> {
   static contextType = StakingContext;
 
-  shouldComponentUpdate(nextProps: PoolListProps, nextState: any) {
+  shouldComponentUpdate(nextProps: PoolListProps) {
     return this.props.pools !== nextProps.pools;
   }
 
@@ -223,5 +287,3 @@ export class PoolListShouldUpdate extends React.Component<any, any> {
     return <PoolListInner {...this.props} />;
   }
 }
-
-export default PoolList;

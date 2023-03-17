@@ -1,46 +1,51 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Element } from 'react-scroll';
-import { useUi } from 'contexts/UI';
-import { PageRowWrapper, TopBarWrapper } from 'Wrappers';
-import { PageTitle } from 'library/PageTitle';
-import Button from 'library/Button';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { ButtonSecondary } from '@polkadotcloud/dashboard-ui';
+import { useConnect } from 'contexts/Connect';
+import { useSetup } from 'contexts/Setup';
 import { CardWrapper } from 'library/Graphs/Wrappers';
+import { PageTitle } from 'library/PageTitle';
 import { Nominate } from 'library/SetupSteps/Nominate';
-import { SetupType } from 'contexts/UI/types';
-import { defaultPoolSetup } from 'contexts/UI/defaults';
-import { PoolName } from './PoolName';
+import { useTranslation } from 'react-i18next';
+import { Element } from 'react-scroll';
+import { PageRowWrapper, TopBarWrapper } from 'Wrappers';
 import { Bond } from './Bond';
+import { PoolName } from './PoolName';
 import { PoolRoles } from './PoolRoles';
 import { Summary } from './Summary';
 
 export const Create = () => {
-  const { setOnPoolSetup, setActiveAccountSetup } = useUi();
+  const { t } = useTranslation('pages');
+  const { activeAccount } = useConnect();
+  const { setOnPoolSetup, removeSetupProgress } = useSetup();
 
   return (
     <>
-      <PageTitle title="Create a Pool" />
+      <PageTitle title={t('pools.createAPool')} />
       <PageRowWrapper className="page-padding" noVerticalSpacer>
         <TopBarWrapper>
-          <Button
-            inline
-            title="Go Back"
-            icon={faChevronLeft}
-            transform="shrink-3"
-            onClick={() => setOnPoolSetup(0)}
-          />
-          <div className="right">
-            <Button
-              inline
-              title="Cancel"
+          <span>
+            <ButtonSecondary
+              lg
+              text={t('pools.back')}
+              iconLeft={faChevronLeft}
+              iconTransform="shrink-3"
+              onClick={() => setOnPoolSetup(false)}
+            />
+          </span>
+          <span>
+            <ButtonSecondary
+              lg
+              text={t('pools.cancel')}
               onClick={() => {
-                setOnPoolSetup(0);
-                setActiveAccountSetup(SetupType.Pool, defaultPoolSetup);
+                setOnPoolSetup(false);
+                removeSetupProgress('pool', activeAccount);
               }}
             />
-          </div>
+          </span>
+          <div className="right" />
         </TopBarWrapper>
       </PageRowWrapper>
       <PageRowWrapper className="page-padding" noVerticalSpacer>
@@ -54,7 +59,7 @@ export const Create = () => {
           <Element name="nominate" style={{ position: 'absolute' }} />
           <Nominate
             batchKey="generate_nominations_create_pool"
-            setupType={SetupType.Pool}
+            bondFor="pool"
             section={2}
           />
         </CardWrapper>

@@ -1,11 +1,13 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { FunctionComponent } from 'react';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ButtonHelp } from '@polkadotcloud/dashboard-ui';
+import { useHelp } from 'contexts/Help';
 import { useModal } from 'contexts/Modal';
 import { ReactComponent as CrossSVG } from 'img/cross.svg';
+import type { FunctionComponent } from 'react';
 import { TitleWrapper } from './Wrappers';
 
 interface TitleProps {
@@ -13,10 +15,12 @@ interface TitleProps {
   icon?: IconProp;
   Svg?: FunctionComponent<any>;
   fixed?: boolean;
+  helpKey?: string;
 }
 
-export const Title = ({ title, icon, fixed, Svg }: TitleProps) => {
+export const Title = ({ helpKey, title, icon, fixed, Svg }: TitleProps) => {
   const { setStatus } = useModal();
+  const { openHelp } = useHelp();
 
   const graphic = Svg ? (
     <Svg style={{ width: '1.5rem', height: '1.5rem' }} />
@@ -28,11 +32,16 @@ export const Title = ({ title, icon, fixed, Svg }: TitleProps) => {
     <TitleWrapper fixed={fixed || false}>
       <div>
         {graphic}
-        <h2>{title}</h2>
+        <h2>
+          {title}
+          {helpKey ? (
+            <ButtonHelp marginLeft onClick={() => openHelp(helpKey)} />
+          ) : null}
+        </h2>
       </div>
       <div>
         <button type="button" onClick={() => setStatus(2)}>
-          <CrossSVG style={{ width: '1.4rem', height: '1.4rem' }} />
+          <CrossSVG style={{ width: '1.25rem', height: '1.25rem' }} />
         </button>
       </div>
     </TitleWrapper>

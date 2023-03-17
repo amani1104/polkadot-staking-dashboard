@@ -1,18 +1,18 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Text } from 'library/StatBoxList/Text';
 import { useValidators } from 'contexts/Validators';
+import { Text } from 'library/StatBoxList/Text';
+import { useTranslation } from 'react-i18next';
 
-export const AverageCommission = () => {
+export const AverageCommissionStat = () => {
+  const { t } = useTranslation('pages');
   const { avgCommission } = useValidators();
 
   const params = {
-    label: 'Average Commission',
+    label: t('validators.averageCommission'),
     value: `${String(avgCommission)}%`,
     helpKey: 'Average Commission',
   };
   return <Text {...params} />;
 };
-
-export default AverageCommission;

@@ -1,13 +1,11 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef } from 'react';
 import { useOutsideAlerter } from 'library/Hooks';
-import { DropdownProps } from './types';
+import { useRef } from 'react';
+import type { DropdownProps } from './types';
 
-export const Dropdown = (props: DropdownProps) => {
-  const { toggleMenu, items } = props;
-
+export const Dropdown = ({ toggleMenu, items }: DropdownProps) => {
   const ref = useRef(null);
   useOutsideAlerter(
     ref,
@@ -23,5 +21,3 @@ export const Dropdown = (props: DropdownProps) => {
     </ul>
   );
 };
-
-export default Dropdown;

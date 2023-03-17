@@ -1,33 +1,21 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import styled from 'styled-components';
-import {
-  backgroundToggle,
-  buttonPrimaryBackground,
-  textPrimary,
-  textSecondary,
-  borderPrimary,
-  textSuccess,
-  backgroundSecondary,
-} from 'theme';
 
 export const ContentWrapper = styled.div`
-  box-sizing: border-box;
   width: 100%;
 
   > h4 {
-    color: ${textSecondary};
+    color: var(--text-color-secondary);
+    border-bottom: 1px solid var(--border-primary-color);
     margin: 0.75rem 0;
     padding-bottom: 0.5rem;
     width: 100%;
-    border-bottom: 1px solid ${borderPrimary};
   }
 
   .items {
-    box-sizing: border-box;
     position: relative;
-    box-sizing: border-box;
     border-bottom: none;
     width: auto;
     border-radius: 0.75rem;
@@ -47,15 +35,13 @@ export const ContentWrapper = styled.div`
 `;
 
 export const StyledButton = styled.button`
-  background: ${buttonPrimaryBackground};
-  box-sizing: border-box;
+  background: var(--button-primary-background);
   padding: 1rem 1.2rem;
   cursor: pointer;
   margin-bottom: 1rem;
   border-radius: 1rem;
   display: inline-flex;
   flex-flow: row wrap;
-  justify-content: flex-start;
   align-items: center;
   width: 100%;
 
@@ -70,7 +56,7 @@ export const StyledButton = styled.button`
   h4 {
     margin: 0;
     &.selected {
-      color: ${textSuccess};
+      color: var(--status-success-color);
       margin-left: 0.75rem;
     }
   }
@@ -82,7 +68,7 @@ export const StyledButton = styled.button`
     justify-content: flex-end;
   }
   &:hover {
-    background: ${backgroundToggle};
+    background: var(--button-hover-background);
   }
   .icon {
     margin-right: 0.75rem;
@@ -94,9 +80,9 @@ export const StyledButton = styled.button`
     > h4 {
       margin-left: 1rem;
       span {
+        background: var(--background-primary);
+        border: 1px solid var(--border-primary-color);
         margin-right: 0.5rem;
-        border: 1px solid ${borderPrimary};
-        background: ${backgroundSecondary};
         padding: 0.25rem 0.75rem;
         border-radius: 1rem;
       }
@@ -104,11 +90,11 @@ export const StyledButton = styled.button`
   }
 
   svg {
-    color: ${textSecondary};
-    fill: ${textSecondary};
+    color: var(--text-color-secondary);
+    fill: var(--text-color-secondary);
   }
   p {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
     font-size: 1rem;
   }
 `;

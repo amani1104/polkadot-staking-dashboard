@@ -1,36 +1,36 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { useState, useEffect, forwardRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { faArrowAltCircleUp } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { useModal } from 'contexts/Modal';
-import { useBalances } from 'contexts/Balances';
+import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { ButtonInvert, ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
+import { useBalances } from 'contexts/Accounts/Balances';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
-import { Warning } from 'library/Form/Warning';
-import { useStaking } from 'contexts/Staking';
-import { planckBnToUnit, rmCommas } from 'Utils';
+import { useModal } from 'contexts/Modal';
 import { useActivePools } from 'contexts/Pools/ActivePools';
-import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
 import { useBondedPools } from 'contexts/Pools/BondedPools';
 import { usePoolMembers } from 'contexts/Pools/PoolMembers';
 import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
+import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
 import { useTxFees } from 'contexts/TxFees';
+import { Warning } from 'library/Form/Warning';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
+import { Action } from 'library/Modal/Action';
+import { SubmitTx } from 'library/SubmitTx';
+import { WarningsWrapper } from 'modals/Wrappers';
+import { forwardRef, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit, rmCommas } from 'Utils';
 import { ContentWrapper } from './Wrappers';
-import { FooterWrapper, Separator, NotesWrapper } from '../Wrappers';
 
 export const Forms = forwardRef(
   ({ setSection, unlock, task }: any, ref: any) => {
-    const { api, network } = useApi();
+    const { t } = useTranslation('modals');
+    const { api, network, consts } = useApi();
     const { activeAccount, accountHasSigner } = useConnect();
-    const { staking } = useStaking();
-    const { removeFavourite: removeFavouritePool } = usePoolsConfig();
+    const { removeFavorite: removeFavoritePool } = usePoolsConfig();
     const { membership } = usePoolMemberships();
     const { selectedActivePool } = useActivePools();
     const { removeFromBondedPools } = useBondedPools();
@@ -39,13 +39,13 @@ export const Forms = forwardRef(
     const { getBondedAccount } = useBalances();
     const { txFeesValid } = useTxFees();
 
-    const { bondType, poolClosure } = config || {};
-    const { historyDepth } = staking;
+    const { bondFor, poolClosure } = config || {};
+    const { historyDepth } = consts;
     const { units } = network;
     const controller = getBondedAccount(activeAccount);
 
-    const isStaking = bondType === 'stake';
-    const isPooling = bondType === 'pool';
+    const isStaking = bondFor === 'nominator';
+    const isPooling = bondFor === 'pool';
 
     // valid to submit transaction
     const [valid, setValid] = useState<boolean>(
@@ -58,27 +58,27 @@ export const Forms = forwardRef(
     }, [unlock]);
 
     // tx to submit
-    const tx = () => {
-      let _tx = null;
+    const getTx = () => {
+      let tx = null;
       if (!valid || !api) {
-        return _tx;
+        return tx;
       }
       // rebond is only available when staking directly.
       if (task === 'rebond' && isStaking) {
-        _tx = api.tx.staking.rebond(unlock.value.toNumber());
+        tx = api.tx.staking.rebond(unlock.value.toNumber());
       } else if (task === 'withdraw' && isStaking) {
-        _tx = api.tx.staking.withdrawUnbonded(historyDepth);
+        tx = api.tx.staking.withdrawUnbonded(historyDepth.toString());
       } else if (task === 'withdraw' && isPooling && selectedActivePool) {
-        _tx = api.tx.nominationPools.withdrawUnbonded(
+        tx = api.tx.nominationPools.withdrawUnbonded(
           activeAccount,
-          historyDepth
+          historyDepth.toString()
         );
       }
-      return _tx;
+      return tx;
     };
     const signingAccount = isStaking ? controller : activeAccount;
     const { submitTx, submitting } = useSubmitExtrinsic({
-      tx: tx(),
+      tx: getTx(),
       from: signingAccount,
       shouldSubmit: valid,
       callbackSubmit: () => {
@@ -87,60 +87,71 @@ export const Forms = forwardRef(
       callbackInBlock: () => {
         // if pool is being closed, remove from static lists
         if (poolClosure) {
-          removeFavouritePool(selectedActivePool?.addresses?.stash ?? '');
+          removeFavoritePool(selectedActivePool?.addresses?.stash ?? '');
           removeFromBondedPools(selectedActivePool?.id ?? 0);
         }
 
         // if no more bonded funds from pool, remove from poolMembers list
-        if (bondType === 'pool') {
+        if (bondFor === 'pool') {
           const points = membership?.points ? rmCommas(membership.points) : 0;
-          const bonded = planckBnToUnit(new BN(points), network.units);
-          if (bonded === 0) {
+          const bonded = planckToUnit(new BigNumber(points), network.units);
+          if (bonded.isZero()) {
             removePoolMember(activeAccount);
           }
         }
       },
     });
 
-    const value = unlock?.value ?? new BN(0);
+    const value = unlock?.value ?? new BigNumber(0);
 
     return (
       <ContentWrapper>
-        <div ref={ref} style={{ paddingBottom: '1rem' }}>
-          <div>
-            {!accountHasSigner(signingAccount) && (
-              <Warning text="Your account is read only, and cannot sign transactions." />
-            )}
-            {task === 'rebond' && (
-              <h2>
-                Rebond {planckBnToUnit(value, units)} {network.unit}
-              </h2>
-            )}
-            {task === 'withdraw' && (
-              <h2>
-                Withdraw {planckBnToUnit(value, units)} {network.unit}
-              </h2>
-            )}
-            <Separator />
-            <NotesWrapper>
-              <EstimatedTxFee />
-            </NotesWrapper>
-          </div>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => setSection(0)}
-              >
-                <FontAwesomeIcon transform="shrink-2" icon={faChevronLeft} />
-                Back
-              </button>
+        <div ref={ref}>
+          <div className="padding">
+            {!accountHasSigner(signingAccount) ? (
+              <WarningsWrapper>
+                <Warning text={t('readOnly')} />
+              </WarningsWrapper>
+            ) : null}
+
+            <div style={{ marginBottom: '2rem' }}>
+              {task === 'rebond' && (
+                <>
+                  <Action
+                    text={`${t('rebond')} ${planckToUnit(value, units)} ${
+                      network.unit
+                    }`}
+                  />
+                  <p>{t('rebondSubtitle')}</p>
+                </>
+              )}
+              {task === 'withdraw' && (
+                <>
+                  <Action
+                    text={`${t('withdraw')} ${planckToUnit(value, units)} ${
+                      network.unit
+                    }`}
+                  />
+                  <p>{t('withdrawSubtitle')}</p>
+                </>
+              )}
             </div>
-            <div>
-              <button
-                type="button"
-                className="submit"
+          </div>
+          <SubmitTx
+            fromController={isStaking}
+            buttons={[
+              <ButtonInvert
+                key="button_back"
+                text={t('back')}
+                iconLeft={faChevronLeft}
+                iconTransform="shrink-1"
+                onClick={() => setSection(0)}
+              />,
+              <ButtonSubmit
+                key="button_submit"
+                text={`${submitting ? t('submitting') : t('submit')}`}
+                iconLeft={faArrowAltCircleUp}
+                iconTransform="grow-2"
                 onClick={() => submitTx()}
                 disabled={
                   !valid ||
@@ -148,15 +159,9 @@ export const Forms = forwardRef(
                   !accountHasSigner(signingAccount) ||
                   !txFeesValid
                 }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
+              />,
+            ]}
+          />
         </div>
       </ContentWrapper>
     );

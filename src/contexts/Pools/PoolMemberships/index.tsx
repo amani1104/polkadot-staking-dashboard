@@ -1,18 +1,18 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import React, { useState, useEffect, useRef } from 'react';
-import { ImportedAccount } from 'contexts/Connect/types';
-import {
+import BigNumber from 'bignumber.js';
+import type { ImportedAccount } from 'contexts/Connect/types';
+import type {
   PoolMembership,
   PoolMembershipsContextState,
 } from 'contexts/Pools/types';
-import { AnyApi, Fn } from 'types';
+import React, { useEffect, useRef, useState } from 'react';
+import type { AnyApi, Fn } from 'types';
 import { rmCommas, setStateWithRef } from 'Utils';
-import * as defaults from './defaults';
 import { useApi } from '../../Api';
 import { useConnect } from '../../Connect';
+import * as defaults from './defaults';
 
 export const PoolMembershipsContext =
   React.createContext<PoolMembershipsContextState>(
@@ -62,11 +62,12 @@ export const PoolMembershipsProvider = ({
   };
 
   // unsubscribe from pool memberships on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       unsubscribeAll();
-    };
-  }, []);
+    },
+    []
+  );
 
   // unsubscribe from all pool memberships
   const unsubscribeAll = () => {
@@ -91,7 +92,7 @@ export const PoolMembershipsProvider = ({
             const value = rmCommas(v as string);
             unlocking.push({
               era: Number(era),
-              value: new BN(value),
+              value: new BigNumber(value),
             });
           }
           membership.points = membership.points

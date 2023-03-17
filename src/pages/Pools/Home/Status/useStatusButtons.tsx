@@ -1,21 +1,22 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { faPlusCircle, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
 import { useActivePools } from 'contexts/Pools/ActivePools';
-import { faUserPlus, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
-import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
-import { useUi } from 'contexts/UI';
-import { useTransferOptions } from 'contexts/TransferOptions';
 import { useBondedPools } from 'contexts/Pools/BondedPools';
+import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
 import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
-import { BN } from 'bn.js';
+import { useSetup } from 'contexts/Setup';
+import { useTransferOptions } from 'contexts/TransferOptions';
+import { useTranslation } from 'react-i18next';
 import { usePoolsTabs } from '../context';
 
 export const useStatusButtons = () => {
+  const { t } = useTranslation('pages');
   const { isReady } = useApi();
-  const { setOnPoolSetup, getPoolSetupProgressPercent } = useUi();
+  const { setOnPoolSetup, getPoolSetupPercent } = useSetup();
   const { activeAccount, isReadOnlyAccount } = useConnect();
   const { stats } = usePoolsConfig();
   const { membership } = usePoolMemberships();
@@ -25,13 +26,16 @@ export const useStatusButtons = () => {
   const { getTransferOptions } = useTransferOptions();
 
   const { active } = getTransferOptions(activeAccount).pool;
-  const poolSetupPercent = getPoolSetupProgressPercent(activeAccount);
+  const poolSetupPercent = getPoolSetupPercent(activeAccount);
 
   let _label;
   let _buttons;
   const createBtn = {
-    title: `Create Pool${poolSetupPercent > 0 ? `: ${poolSetupPercent}%` : ``}`,
+    title: `${t('pools.create')}${
+      poolSetupPercent > 0 ? `: ${poolSetupPercent}%` : ``
+    }`,
     icon: faPlusCircle,
+    large: false,
     transform: 'grow-1',
     disabled:
       !isReady ||
@@ -39,12 +43,13 @@ export const useStatusButtons = () => {
       !activeAccount ||
       stats.maxPools.toNumber() === 0 ||
       bondedPools.length === stats.maxPools.toNumber(),
-    onClick: () => setOnPoolSetup(1),
+    onClick: () => setOnPoolSetup(true),
   };
 
   const joinPoolBtn = {
-    title: `Join Pool`,
+    title: `${t('pools.join')}`,
     icon: faUserPlus,
+    large: false,
     transform: 'grow-1',
     disabled:
       !isReady ||
@@ -55,14 +60,14 @@ export const useStatusButtons = () => {
   };
 
   if (!membership) {
-    _label = 'Pool Membership';
+    _label = t('pools.poolMembership');
     _buttons = [createBtn, joinPoolBtn];
   } else if (isOwner()) {
-    _label = `Owner of Pool ${membership.poolId}`;
-  } else if (active?.gtn(0)) {
-    _label = `Member of Pool ${membership.poolId}`;
+    _label = `${t('pools.ownerOfPool')} ${membership.poolId}`;
+  } else if (active?.isGreaterThan(0)) {
+    _label = `${t('pools.memberOfPool')} ${membership.poolId}`;
   } else {
-    _label = `Leaving Pool ${membership.poolId}`;
+    _label = `${t('pools.leavingPool')} ${membership.poolId}`;
   }
   return { label: _label, buttons: _buttons };
 };

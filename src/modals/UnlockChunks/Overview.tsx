@@ -1,127 +1,144 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { forwardRef } from 'react';
+import { faCheckCircle, faClock } from '@fortawesome/free-regular-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
-import { planckBnToUnit } from 'Utils';
-import Button from 'library/Button';
 import { useNetworkMetrics } from 'contexts/Network';
-import { ContentWrapper, ChunkWrapper } from './Wrappers';
-import { Separator, NotesWrapper } from '../Wrappers';
+import { getUnixTime } from 'date-fns';
+import { useErasToTimeLeft } from 'library/Hooks/useErasToTimeLeft';
+import { timeleftAsString } from 'library/Hooks/useTimeLeft/utils';
+import { useUnstaking } from 'library/Hooks/useUnstaking';
+import { StatsWrapper, StatWrapper } from 'library/Modal/Wrappers';
+import { StaticNote } from 'modals/Utils/StaticNote';
+import { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { AnyJson } from 'types';
+import { planckToUnit } from 'Utils';
+import { NotesWrapper } from '../Wrappers';
+import { Chunk } from './Chunk';
+import { ContentWrapper } from './Wrappers';
 
 export const Overview = forwardRef(
-  ({ unlocking, bondType, setSection, setUnlock, setTask }: any, ref: any) => {
+  ({ unlocking, bondFor, setSection, setUnlock, setTask }: any, ref: any) => {
+    const { t } = useTranslation('modals');
     const { network, consts } = useApi();
-    const { metrics } = useNetworkMetrics();
+    const { activeEra } = useNetworkMetrics();
     const { bondDuration } = consts;
     const { units } = network;
-    const { activeEra } = metrics;
+    const { isFastUnstaking } = useUnstaking();
+    const { erasToSeconds } = useErasToTimeLeft();
 
-    const isStaking = bondType === 'stake';
+    const bondDurationFormatted = timeleftAsString(
+      t,
+      getUnixTime(new Date()) + 1,
+      erasToSeconds(bondDuration),
+      true
+    );
 
-    // calculate total withdraw available
-    let withdrawAvailable = new BN(0);
+    const isStaking = bondFor === 'nominator';
+
+    let withdrawAvailable = new BigNumber(0);
+    let totalUnbonding = new BigNumber(0);
     for (const _chunk of unlocking) {
       const { era, value } = _chunk;
-      const left = era - activeEra.index;
+      const left = new BigNumber(era).minus(activeEra.index);
 
-      if (left <= 0) {
-        withdrawAvailable = withdrawAvailable.add(value);
+      totalUnbonding = totalUnbonding.plus(value);
+      if (left.isLessThanOrEqualTo(0)) {
+        withdrawAvailable = withdrawAvailable.plus(value);
       }
     }
 
+    const onRebondHandler = (chunk: AnyJson) => {
+      setTask('rebond');
+      setUnlock(chunk);
+      setSection(1);
+    };
+
     return (
       <ContentWrapper ref={ref}>
-        {withdrawAvailable.toNumber() > 0 && (
-          <>
-            <ChunkWrapper noFill>
-              <h4>Available to Withdraw</h4>
-              <div>
-                <section>
-                  <h2>
-                    {planckBnToUnit(withdrawAvailable, units)} {network.unit}
-                  </h2>
-                </section>
-                <section>
-                  <div>
-                    <Button
-                      small
-                      inline
-                      primary
-                      title="Withdraw"
-                      onClick={() => {
-                        setTask('withdraw');
-                        setUnlock({
-                          era: 0,
-                          value: withdrawAvailable,
-                        });
-                        setSection(1);
-                      }}
-                    />
-                  </div>
-                </section>
+        <div className="padding">
+          <StatsWrapper>
+            <StatWrapper>
+              <div className="inner">
+                <h4>
+                  <FontAwesomeIcon icon={faCheckCircle} className="icon" />{' '}
+                  {t('unlocked')}
+                </h4>
+                <h2>
+                  {planckToUnit(withdrawAvailable, units)
+                    .decimalPlaces(3)
+                    .toFormat()}{' '}
+                  {network.unit}
+                </h2>
               </div>
-            </ChunkWrapper>
-          </>
-        )}
-        {unlocking.length === 0 && <h2>No Unlocks</h2>}
-        {unlocking.map((chunk: any, index: number) => {
-          const { era, value } = chunk;
-          const left = era - activeEra.index;
+            </StatWrapper>
+            <StatWrapper>
+              <div className="inner">
+                <h4>
+                  <FontAwesomeIcon icon={faClock} className="icon" />{' '}
+                  {t('unbonding')}
+                </h4>
+                <h2>
+                  {planckToUnit(totalUnbonding.minus(withdrawAvailable), units)
+                    .decimalPlaces(3)
+                    .toFormat()}{' '}
+                  {network.unit}
+                </h2>
+              </div>
+            </StatWrapper>
+            <StatWrapper>
+              <div className="inner">
+                <h4>{t('total')}</h4>
+                <h2>
+                  {planckToUnit(totalUnbonding, units)
+                    .decimalPlaces(3)
+                    .toFormat()}{' '}
+                  {network.unit}
+                </h2>
+              </div>
+            </StatWrapper>
+          </StatsWrapper>
 
-          return (
-            <ChunkWrapper key={`unlock_chunk_${index}`}>
-              <h4>{left <= 0 ? 'Unlocked' : `Unlocks after era ${era}`}</h4>
-              <div>
-                <section>
-                  <h2>
-                    {planckBnToUnit(value, units)} {network.unit}
-                  </h2>
-                  {left > 0 ? (
-                    <h3>
-                      {left} era{left !== 1 && 's'} remaining before withdraw.
-                    </h3>
-                  ) : (
-                    <h3>Available to withdraw</h3>
-                  )}
-                </section>
-                {isStaking && (
-                  <section>
-                    <div>
-                      <Button
-                        small
-                        inline
-                        primary
-                        title="Rebond"
-                        onClick={() => {
-                          setTask('rebond');
-                          setUnlock(chunk);
-                          setSection(1);
-                        }}
-                      />
-                    </div>
-                  </section>
-                )}
-              </div>
-              <Separator />
-            </ChunkWrapper>
-          );
-        })}
-        <NotesWrapper>
-          <p>
-            Unlocks take {bondDuration} eras before they can be withdrawn.
-            {isStaking &&
-              `You can rebond unlocks at any time in this period, or withdraw them to your free balance thereafter.`}
-          </p>
-          {!isStaking && (
-            <p>
-              Unlock chunks cannot currently be rebonded in a pool. If you wish
-              to rebond, withdraw the unlock chunk first and the add to your
-              bond.
-            </p>
+          {withdrawAvailable.toNumber() > 0 && (
+            <div style={{ margin: '1rem 0 0.5rem 0' }}>
+              <ButtonSubmit
+                disabled={isFastUnstaking}
+                text={t('withdrawUnlocked')}
+                onClick={() => {
+                  setTask('withdraw');
+                  setUnlock({
+                    era: 0,
+                    value: withdrawAvailable,
+                  });
+                  setSection(1);
+                }}
+              />
+            </div>
           )}
-        </NotesWrapper>
+
+          {unlocking.map((chunk: any, i: number) => (
+            <Chunk
+              key={`unlock_chunk_${i}`}
+              chunk={chunk}
+              bondFor={bondFor}
+              onRebond={onRebondHandler}
+            />
+          ))}
+          <NotesWrapper>
+            <StaticNote
+              value={bondDurationFormatted}
+              tKey="unlockTake"
+              valueKey="bondDurationFormatted"
+              deps={[bondDuration]}
+            />
+            <p> {isStaking ? ` ${t('rebondUnlock')}` : null}</p>
+            {!isStaking ? <p>{t('unlockChunk')}</p> : null}
+          </NotesWrapper>
+        </div>
       </ContentWrapper>
     );
   }

@@ -1,50 +1,51 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { forwardRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useActivePools } from 'contexts/Pools/ActivePools';
-import { PoolState } from 'contexts/Pools/types';
 import { Warning } from 'library/Form/Warning';
+import { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContentWrapper } from './Wrappers';
 
-export const Tasks = forwardRef((props: any, ref: any) => {
-  const { setSection, setTask } = props;
-
+export const Tasks = forwardRef(({ setSection, setTask }: any, ref: any) => {
+  const { t } = useTranslation('modals');
   const { selectedActivePool, isOwner, isStateToggler } = useActivePools();
-  const poolLocked = selectedActivePool?.bondedPool?.state === PoolState.Block;
-  const poolDestroying =
-    selectedActivePool?.bondedPool?.state === PoolState.Destroy;
+
+  const poolLocked = selectedActivePool?.bondedPool?.state === 'Blocked';
+  const poolDestroying = selectedActivePool?.bondedPool?.state === 'Destroying';
 
   return (
     <ContentWrapper>
-      {poolDestroying && (
-        <Warning text="This pool is being destroyed. There are no management options available." />
-      )}
+      <div className="padding">
+        {poolDestroying && <Warning text={t('beingDestroyed')} />}
 
-      <div className="items" ref={ref}>
-        {isOwner() && (
-          <button
-            type="button"
-            className="action-button"
-            disabled={poolDestroying}
-            onClick={() => {
-              setSection(1);
-              setTask('set_pool_metadata');
-            }}
-          >
-            <div>
-              <h3>Rename Pool</h3>
-              <p>Update the public name of the pool.</p>
-            </div>
-            <div>
-              <FontAwesomeIcon transform="shrink-2" icon={faChevronRight} />
-            </div>
-          </button>
-        )}
-        {isOwner() ||
-          (isStateToggler() && (
+        <div
+          className="items"
+          ref={ref}
+          style={{ paddingBottom: '1.5rem', paddingTop: '1.5rem' }}
+        >
+          {isOwner() && (
+            <button
+              type="button"
+              className="action-button"
+              disabled={poolDestroying}
+              onClick={() => {
+                setSection(1);
+                setTask('set_pool_metadata');
+              }}
+            >
+              <div>
+                <h3>{t('renamePool')}</h3>
+                <p>{t('updateName')}</p>
+              </div>
+              <div>
+                <FontAwesomeIcon transform="shrink-2" icon={faChevronRight} />
+              </div>
+            </button>
+          )}
+          {(isOwner() || isStateToggler()) && (
             <>
               {poolLocked ? (
                 <button
@@ -57,8 +58,8 @@ export const Tasks = forwardRef((props: any, ref: any) => {
                   }}
                 >
                   <div>
-                    <h3>Unlock Pool</h3>
-                    <p>Allow new members to join the pool.</p>
+                    <h3>{t('unlockPool')}</h3>
+                    <p>{t('allowToJoin')}</p>
                   </div>
                   <div>
                     <FontAwesomeIcon
@@ -78,8 +79,8 @@ export const Tasks = forwardRef((props: any, ref: any) => {
                   }}
                 >
                   <div>
-                    <h3>Lock Pool</h3>
-                    <p>Stop new members from joining the pool.</p>
+                    <h3>{t('lockPool')}</h3>
+                    <p>{t('stopJoiningPool')}</p>
                   </div>
                   <div>
                     <FontAwesomeIcon
@@ -99,18 +100,17 @@ export const Tasks = forwardRef((props: any, ref: any) => {
                 }}
               >
                 <div>
-                  <h3>Destroy Pool</h3>
-                  <p>Change pool to destroying state.</p>
+                  <h3>{t('destroyPool')}</h3>
+                  <p>{t('changeToDestroy')}</p>
                 </div>
                 <div>
                   <FontAwesomeIcon transform="shrink-2" icon={faChevronRight} />
                 </div>
               </button>
             </>
-          ))}
+          )}
+        </div>
       </div>
     </ContentWrapper>
   );
 });
-
-export default Tasks;

@@ -1,12 +1,19 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useModal } from 'contexts/Modal';
-import { faCaretRight } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from 'react-i18next';
 
-export const JoinPool = (props: { id: number; setActiveTab: any }) => {
-  const { id, setActiveTab } = props;
+export const JoinPool = ({
+  id,
+  setActiveTab,
+}: {
+  id: number;
+  setActiveTab: any;
+}) => {
+  const { t } = useTranslation('library');
   const { openModalWith } = useModal();
 
   return (
@@ -24,7 +31,7 @@ export const JoinPool = (props: { id: number; setActiveTab: any }) => {
           );
         }}
       >
-        Join
+        {t('join')}
         <FontAwesomeIcon icon={faCaretRight} transform="shrink-2" />
       </button>
     </div>

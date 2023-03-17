@@ -1,40 +1,43 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'contexts/Account';
-import { useConnect } from 'contexts/Connect';
-import { useApi } from 'contexts/Api';
-import { CardHeaderWrapper } from 'library/Graphs/Wrappers';
-import { OpenHelpIcon } from 'library/OpenHelpIcon';
-import { useActivePools } from 'contexts/Pools/ActivePools';
-import Button from 'library/Button';
 import {
-  faEdit,
   faCheckCircle,
+  faEdit,
   faTimesCircle,
 } from '@fortawesome/free-solid-svg-icons';
-import { useUi } from 'contexts/UI';
+import { ButtonHelp, ButtonPrimary } from '@polkadotcloud/dashboard-ui';
+import { useApi } from 'contexts/Api';
+import { useConnect } from 'contexts/Connect';
+import { useHelp } from 'contexts/Help';
+import { useIdentities } from 'contexts/Identities';
 import { useModal } from 'contexts/Modal';
-import { PoolAccount } from '../PoolAccount';
+import { useActivePools } from 'contexts/Pools/ActivePools';
+import { useUi } from 'contexts/UI';
+import { CardHeaderWrapper } from 'library/Graphs/Wrappers';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RolesWrapper } from '../Home/ManagePool/Wrappers';
-import RoleEditInput from './RoleEditInput';
-import { RolesProps, RoleEditEntry } from './types';
+import { PoolAccount } from '../PoolAccount';
+import { RoleEditInput } from './RoleEditInput';
+import type { RoleEditEntry, RolesProps } from './types';
 
-export const Roles = (props: RolesProps) => {
-  const { batchKey, defaultRoles } = props;
-
-  const listenIsValid = props.listenIsValid ?? (() => {});
-  const setters = props.setters ?? [];
-
-  const { isReady } = useApi();
+export const Roles = ({
+  batchKey,
+  defaultRoles,
+  setters = [],
+  listenIsValid = () => {},
+}: RolesProps) => {
+  const { t } = useTranslation('pages');
+  const { isReady, network } = useApi();
   const { activeAccount, isReadOnlyAccount } = useConnect();
-  const { fetchAccountMetaBatch } = useAccount();
+  const { fetchIdentitiesMetaBatch } = useIdentities();
   const { isOwner, selectedActivePool } = useActivePools();
-  const { isSyncing } = useUi();
+  const { isPoolSyncing } = useUi();
   const { openModalWith } = useModal();
   const { id } = selectedActivePool || { id: 0 };
   const roles = defaultRoles;
+  const { openHelp } = useHelp();
 
   const initialiseEdits = (() => {
     const initState: Record<string, RoleEditEntry> = {};
@@ -64,15 +67,16 @@ export const Roles = (props: RolesProps) => {
   // update default roles on account switch
   useEffect(() => {
     setAccounts(Object.values(roles));
+    setIsEditing(false);
     setRoleEdits(initialiseEdits);
     setFetched(false);
-  }, [activeAccount]);
+  }, [activeAccount, network]);
 
   // fetch accounts meta batch
   useEffect(() => {
     if (isReady && !fetched) {
       setFetched(true);
-      fetchAccountMetaBatch(batchKey, Object.values(roles), false);
+      fetchIdentitiesMetaBatch(batchKey, Object.values(roles), true);
     }
   }, [isReady, fetched]);
 
@@ -136,7 +140,8 @@ export const Roles = (props: RolesProps) => {
     <>
       <CardHeaderWrapper withAction>
         <h3>
-          Roles <OpenHelpIcon helpKey="Pool Roles" />
+          {t('pools.roles')}{' '}
+          <ButtonHelp marginLeft onClick={() => openHelp('Pool Roles')} />
         </h3>
         {!(isOwner() === true || setters.length) ? (
           <></>
@@ -144,29 +149,23 @@ export const Roles = (props: RolesProps) => {
           <>
             {isEditing && (
               <div>
-                <Button
-                  small
-                  icon={faTimesCircle}
-                  transform="grow-1"
-                  inline
-                  primary
-                  title="Cancel"
-                  disabled={isSyncing || isReadOnlyAccount(activeAccount)}
+                <ButtonPrimary
+                  iconLeft={faTimesCircle}
+                  iconTransform="grow-1"
+                  text={t('pools.cancel')}
+                  disabled={isPoolSyncing || isReadOnlyAccount(activeAccount)}
                   onClick={() => cancelHandler()}
                 />
               </div>
             )}
             &nbsp;&nbsp;
             <div>
-              <Button
-                small
-                icon={isEditing ? faCheckCircle : faEdit}
-                transform="grow-1"
-                inline
-                primary
-                title={isEditing ? 'Save' : 'Edit'}
+              <ButtonPrimary
+                iconLeft={isEditing ? faCheckCircle : faEdit}
+                iconTransform="grow-1"
+                text={isEditing ? t('pools.save') : t('pools.edit')}
                 disabled={
-                  isSyncing ||
+                  isPoolSyncing ||
                   isReadOnlyAccount(activeAccount) ||
                   !isRoleEditsValid()
                 }
@@ -179,7 +178,7 @@ export const Roles = (props: RolesProps) => {
       <RolesWrapper>
         <section>
           <div className="inner">
-            <h4>Depositor</h4>
+            <h4>{t('pools.depositor')}</h4>
             <PoolAccount
               address={roles.depositor ?? null}
               batchIndex={accounts.indexOf(roles.depositor ?? '-1')}
@@ -189,7 +188,7 @@ export const Roles = (props: RolesProps) => {
         </section>
         <section>
           <div className="inner">
-            <h4>Root</h4>
+            <h4>{t('pools.root')}</h4>
             {isEditing ? (
               <RoleEditInput
                 roleKey="root"
@@ -207,7 +206,7 @@ export const Roles = (props: RolesProps) => {
         </section>
         <section>
           <div className="inner">
-            <h4>Nominator</h4>
+            <h4>{t('pools.nominator')}</h4>
             {isEditing ? (
               <RoleEditInput
                 roleKey="nominator"
@@ -225,7 +224,7 @@ export const Roles = (props: RolesProps) => {
         </section>
         <section>
           <div className="inner">
-            <h4>State Toggler</h4>
+            <h4>{t('pools.stateToggler')}</h4>
             {isEditing ? (
               <RoleEditInput
                 roleKey="stateToggler"

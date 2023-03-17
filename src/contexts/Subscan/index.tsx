@@ -1,15 +1,17 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect } from 'react';
-import { API_ENDPOINTS, API_SUBSCAN_KEY } from 'consts';
-import { UIContextInterface } from 'contexts/UI/types';
-import { AnyApi, AnySubscan } from 'types';
+import { ApiEndpoints, ApiSubscanKey } from 'consts';
+import { useNetworkMetrics } from 'contexts/Network';
+import { useErasToTimeLeft } from 'library/Hooks/useErasToTimeLeft';
+import React, { useEffect, useState } from 'react';
+import type { AnyApi, AnySubscan } from 'types';
+import { isNotZero } from 'Utils';
 import { useApi } from '../Api';
 import { useConnect } from '../Connect';
-import { useUi } from '../UI';
+import { usePlugins } from '../Plugins';
 import { defaultSubscanContext } from './defaults';
-import { SubscanContextInterface } from './types';
+import type { SubscanContextInterface } from './types';
 
 export const SubscanContext = React.createContext<SubscanContextInterface>(
   defaultSubscanContext
@@ -23,8 +25,10 @@ export const SubscanProvider = ({
   children: React.ReactNode;
 }) => {
   const { network, isReady } = useApi();
-  const { services, getServices }: UIContextInterface = useUi();
+  const { plugins, getPlugins } = usePlugins();
   const { activeAccount } = useConnect();
+  const { activeEra } = useNetworkMetrics();
+  const { erasToSeconds } = useErasToTimeLeft();
 
   // store fetched payouts from Subscan
   const [payouts, setPayouts] = useState<AnySubscan>([]);
@@ -32,25 +36,50 @@ export const SubscanProvider = ({
   // store fetched pool claims from Subscan
   const [poolClaims, setPoolClaims] = useState<AnySubscan>([]);
 
+  // store fetched unclaimed payouts from Subscan
+  const [unclaimedPayouts, setUnclaimedPayouts] = useState<AnyApi>([]);
+
+  // handle fetching the various types of payout and set state in one render.
+  const handleFetchPayouts = async () => {
+    if (activeAccount === null || !plugins.includes('subscan')) {
+      resetPayouts();
+      return;
+    }
+    const results = await Promise.all([fetchPayouts(), fetchPoolClaims()]);
+
+    const { newClaimedPayouts, newUnclaimedPayouts } = results[0];
+    const newPoolClaims = results[1];
+
+    setPayouts(newClaimedPayouts);
+    setUnclaimedPayouts(newUnclaimedPayouts);
+    setPoolClaims(newPoolClaims);
+  };
+
+  // reset all payout state
+  const resetPayouts = () => {
+    setPayouts([]);
+    setUnclaimedPayouts([]);
+    setPoolClaims([]);
+  };
+
+  // fetch payouts on plugins toggle
+  useEffect(() => {
+    if (isNotZero(activeEra.index)) {
+      handleFetchPayouts();
+    }
+  }, [plugins, activeEra]);
+
   // reset payouts on network switch
   useEffect(() => {
-    setPayouts([]);
-    setPoolClaims([]);
+    resetPayouts();
   }, [network]);
 
   // fetch payouts as soon as network is ready
   useEffect(() => {
-    if (isReady) {
-      fetchPayouts();
-      fetchPoolClaims();
+    if (isReady && isNotZero(activeEra.index)) {
+      handleFetchPayouts();
     }
-  }, [isReady, network, activeAccount]);
-
-  // fetch payouts on services toggle
-  useEffect(() => {
-    fetchPayouts();
-    fetchPoolClaims();
-  }, [services]);
+  }, [isReady, network, activeAccount, activeEra]);
 
   /* fetchPayouts
    * fetches payout history from Subscan.
@@ -60,30 +89,21 @@ export const SubscanProvider = ({
    * Stores resulting payouts in context state.
    */
   const fetchPayouts = async () => {
-    if (activeAccount === null || !services.includes('subscan')) {
-      setPayouts([]);
-      return;
-    }
+    let newClaimedPayouts: Array<AnySubscan> = [];
+    let newUnclaimedPayouts: Array<AnySubscan> = [];
 
-    // fetch 2 pages of results if subscan is enabled
-    if (getServices().includes('subscan')) {
-      let _payouts: Array<AnySubscan> = [];
-
-      // fetch 3 pages of results
+    // fetch results if subscan is enabled
+    if (activeAccount && getPlugins().includes('subscan')) {
+      // fetch 1 page of results
       const results = await Promise.all([
-        handleFetch(activeAccount, 0, API_ENDPOINTS.subscanRewardSlash, {
+        handleFetch(activeAccount, 0, ApiEndpoints.subscanRewardSlash, {
           is_stash: true,
-          claimed_filter: 'claimed',
-        }),
-        handleFetch(activeAccount, 1, API_ENDPOINTS.subscanRewardSlash, {
-          is_stash: true,
-          claimed_filter: 'claimed',
         }),
       ]);
 
       // user may have turned off service while results were fetching.
       // test again whether subscan service is still active.
-      if (getServices().includes('subscan')) {
+      if (getPlugins().includes('subscan')) {
         for (const result of results) {
           if (!result?.data?.list) {
             break;
@@ -92,11 +112,29 @@ export const SubscanProvider = ({
           const list = result.data.list.filter(
             (l: AnyApi) => l.block_timestamp !== 0
           );
-          _payouts = _payouts.concat(list);
+          newClaimedPayouts = newClaimedPayouts.concat(list);
+
+          const unclaimedList = result.data.list.filter(
+            (l: AnyApi) => l.block_timestamp === 0
+          );
+
+          // Inject block_timestamp for unclaimed payouts. We take the timestamp of the start of the
+          // following payout era - this is the time payouts become available to claim by
+          // validators.
+          unclaimedList.forEach((p: AnyApi) => {
+            p.block_timestamp = activeEra.start
+              .multipliedBy(0.001)
+              .minus(erasToSeconds(activeEra.index.minus(p.era).minus(1)))
+              .toNumber();
+          });
+          newUnclaimedPayouts = newUnclaimedPayouts.concat(unclaimedList);
         }
-        setPayouts(_payouts);
       }
     }
+    return {
+      newClaimedPayouts,
+      newUnclaimedPayouts,
+    };
   };
 
   /* fetchPoolClaims
@@ -107,24 +145,18 @@ export const SubscanProvider = ({
    * Stores resulting claims in context state.
    */
   const fetchPoolClaims = async () => {
-    if (activeAccount === null || !services.includes('subscan')) {
-      setPoolClaims([]);
-      return;
-    }
+    let newPoolClaims: Array<AnySubscan> = [];
 
-    // fetch 2 pages of results if subscan is enabled
-    if (getServices().includes('subscan')) {
-      let _poolClaims: Array<AnySubscan> = [];
-
-      // fetch 3 pages of results
+    // fetch results if subscan is enabled
+    if (activeAccount && getPlugins().includes('subscan')) {
+      // fetch 1 page of results
       const results = await Promise.all([
-        handleFetch(activeAccount, 0, API_ENDPOINTS.subscanPoolRewards),
-        handleFetch(activeAccount, 1, API_ENDPOINTS.subscanPoolRewards),
+        handleFetch(activeAccount, 0, ApiEndpoints.subscanPoolRewards),
       ]);
 
       // user may have turned off service while results were fetching.
       // test again whether subscan service is still active.
-      if (getServices().includes('subscan')) {
+      if (getPlugins().includes('subscan')) {
         for (const result of results) {
           // check incorrectly formatted result object
           if (!result?.data?.list) {
@@ -138,11 +170,11 @@ export const SubscanProvider = ({
           const list = result.data.list.filter(
             (l: AnyApi) => l.block_timestamp !== 0
           );
-          _poolClaims = _poolClaims.concat(list);
+          newPoolClaims = newPoolClaims.concat(list);
         }
-        setPoolClaims(_poolClaims);
       }
     }
+    return newPoolClaims;
   };
 
   /* fetchEraPoints
@@ -152,14 +184,14 @@ export const SubscanProvider = ({
    * returns eraPoints
    */
   const fetchEraPoints = async (address: string, era: number) => {
-    if (address === '' || !services.includes('subscan')) {
+    if (address === '' || !plugins.includes('subscan')) {
       return [];
     }
 
-    const res = await handleFetch(address, 0, API_ENDPOINTS.subscanEraStat);
+    const res = await handleFetch(address, 0, ApiEndpoints.subscanEraStat);
 
     if (res.message === 'Success') {
-      if (getServices().includes('subscan')) {
+      if (getPlugins().includes('subscan')) {
         if (res.data?.list !== null) {
           const list = [];
           for (let i = era; i > era - 100; i--) {
@@ -198,7 +230,7 @@ export const SubscanProvider = ({
     const res: Response = await fetch(network.subscanEndpoint + endpoint, {
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_SUBSCAN_KEY,
+        'X-API-Key': ApiSubscanKey,
       },
       body: JSON.stringify(bodyJson),
       method: 'POST',
@@ -213,6 +245,7 @@ export const SubscanProvider = ({
         fetchEraPoints,
         payouts,
         poolClaims,
+        unclaimedPayouts,
       }}
     >
       {children}

@@ -1,28 +1,24 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlayCircle } from '@fortawesome/free-solid-svg-icons';
 import { faArrowAltCircleUp } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { useActivePools } from 'contexts/Pools/ActivePools';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
 import { useApi } from 'contexts/Api';
-import { useModal } from 'contexts/Modal';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
 import { useConnect } from 'contexts/Connect';
-import { Warning } from 'library/Form/Warning';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
+import { useModal } from 'contexts/Modal';
+import { useActivePools } from 'contexts/Pools/ActivePools';
 import { useTxFees } from 'contexts/TxFees';
-import { Title } from 'library/Modal/Title';
-import {
-  FooterWrapper,
-  Separator,
-  NotesWrapper,
-  PaddingWrapper,
-} from '../Wrappers';
+import { Warning } from 'library/Form/Warning';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
+import { Action } from 'library/Modal/Action';
+import { Close } from 'library/Modal/Close';
+import { SubmitTx } from 'library/SubmitTx';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { PaddingWrapper, WarningsWrapper } from '../Wrappers';
 
 export const NominatePool = () => {
+  const { t } = useTranslation('modals');
   const { api } = useApi();
   const { setStatus: setModalStatus } = useModal();
   const { activeAccount, accountHasSigner } = useConnect();
@@ -44,18 +40,18 @@ export const NominatePool = () => {
   }, [isValid]);
 
   // tx to submit
-  const tx = () => {
-    let _tx = null;
+  const getTx = () => {
+    let tx = null;
     if (!valid || !api) {
-      return _tx;
+      return tx;
     }
     const targetsToSubmit = nominations.map((item: any) => item.address);
-    _tx = api.tx.nominationPools.nominate(poolId, targetsToSubmit);
-    return _tx;
+    tx = api.tx.nominationPools.nominate(poolId, targetsToSubmit);
+    return tx;
   };
 
   const { submitTx, submitting } = useSubmitExtrinsic({
-    tx: tx(),
+    tx: getTx(),
     from: activeAccount,
     shouldSubmit: valid,
     callbackSubmit: () => {
@@ -67,62 +63,48 @@ export const NominatePool = () => {
   // warnings
   const warnings = [];
   if (!accountHasSigner(activeAccount)) {
-    warnings.push('Your account is read only, and cannot sign transactions.');
+    warnings.push(t('readOnly'));
   }
   if (!nominations.length) {
-    warnings.push('You have no nominations set.');
+    warnings.push(t('noNominationsSet'));
   }
   if (!isOwner() || !isNominator()) {
-    warnings.push(`You do not have a nominator role in any pools.`);
+    warnings.push(`${t('noNominatorRole')}`);
   }
 
   return (
     <>
-      <Title title="Nominate" icon={faPlayCircle} />
-      <PaddingWrapper verticalOnly>
-        <div
-          style={{ padding: '0 1rem', width: '100%', boxSizing: 'border-box' }}
-        >
-          {warnings.map((text: string, index: number) => (
-            <Warning key={`warning_${index}`} text={text} />
-          ))}
-          <h2>
-            You Have {nominations.length} Nomination
-            {nominations.length === 1 ? '' : 's'}
-          </h2>
-          <Separator />
-          <NotesWrapper>
-            <p>
-              Once submitted, you will start nominating your chosen validators.
-            </p>
-            <EstimatedTxFee />
-          </NotesWrapper>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => submitTx()}
-                disabled={
-                  !valid ||
-                  submitting ||
-                  warnings.length > 0 ||
-                  !accountHasSigner(activeAccount) ||
-                  !txFeesValid
-                }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
-        </div>
+      <Close />
+      <PaddingWrapper>
+        <h2 className="title unbounded">{t('nominate')}</h2>
+        {warnings.length ? (
+          <WarningsWrapper>
+            {warnings.map((text: string, index: number) => (
+              <Warning key={`warning_${index}`} text={text} />
+            ))}
+          </WarningsWrapper>
+        ) : null}
+        <Action text={t('haveNomination', { count: nominations.length })} />
+        <p>{t('onceSubmitted')}</p>
       </PaddingWrapper>
+      <SubmitTx
+        buttons={[
+          <ButtonSubmit
+            key="button_submit"
+            text={`${submitting ? t('submitting') : t('submit')}`}
+            iconLeft={faArrowAltCircleUp}
+            iconTransform="grow-2"
+            onClick={() => submitTx()}
+            disabled={
+              !valid ||
+              submitting ||
+              warnings.length > 0 ||
+              !accountHasSigner(activeAccount) ||
+              !txFeesValid
+            }
+          />,
+        ]}
+      />
     </>
   );
 };
-
-export default NominatePool;

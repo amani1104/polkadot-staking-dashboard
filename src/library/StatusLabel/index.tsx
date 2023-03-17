@@ -1,20 +1,30 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
-import { useUi } from 'contexts/UI';
-import { useStaking } from 'contexts/Staking';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ButtonHelp } from '@polkadotcloud/dashboard-ui';
+import { useHelp } from 'contexts/Help';
+import { usePlugins } from 'contexts/Plugins';
 import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
+import { useStaking } from 'contexts/Staking';
+import { useUi } from 'contexts/UI';
+import type { StatusLabelProps } from './types';
 import { Wrapper } from './Wrapper';
-import { StatusLabelProps } from './types';
 
-export const StatusLabel = (props: StatusLabelProps) => {
-  const status = props.status ?? 'sync_or_setup';
-
-  const { isSyncing, services } = useUi();
+export const StatusLabel = ({
+  title,
+  helpKey,
+  hideIcon,
+  statusFor = '',
+  topOffset = '40%',
+  status = 'sync_or_setup',
+}: StatusLabelProps) => {
+  const { isSyncing } = useUi();
+  const { plugins } = usePlugins();
   const { inSetup } = useStaking();
   const { membership } = usePoolMemberships();
+  const { openHelp } = useHelp();
 
   // syncing or not staking
   if (status === 'sync_or_setup') {
@@ -24,25 +34,29 @@ export const StatusLabel = (props: StatusLabelProps) => {
   }
 
   if (status === 'active_service') {
-    if (services.includes(props.statusFor || '')) {
+    if (plugins.includes(statusFor || '')) {
       return <></>;
     }
   }
 
-  const { title } = props;
-  const topOffset = props.topOffset ?? '40%';
-
   return (
     <Wrapper topOffset={topOffset}>
       <div>
-        <FontAwesomeIcon icon={faExclamationTriangle} />
+        {hideIcon !== true && <FontAwesomeIcon icon={faExclamationTriangle} />}
         <h2>
           &nbsp;&nbsp;
           {title}
+          {helpKey ? (
+            <span>
+              <ButtonHelp
+                marginLeft
+                onClick={() => openHelp(helpKey)}
+                backgroundSecondary
+              />
+            </span>
+          ) : null}
         </h2>
       </div>
     </Wrapper>
   );
 };
-
-export default StatusLabel;

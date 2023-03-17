@@ -1,15 +1,16 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { planckBnToUnit, rmCommas, toFixedIfNecessary } from 'Utils';
-import { useActivePools } from 'contexts/Pools/ActivePools';
-import { PoolState } from 'contexts/Pools/types';
-import { usePoolMembers } from 'contexts/Pools/PoolMembers';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
+import { useActivePools } from 'contexts/Pools/ActivePools';
+import { usePoolMembers } from 'contexts/Pools/PoolMembers';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit, rmCommas } from 'Utils';
 import { HeaderWrapper } from './Wrappers';
 
 export const Header = () => {
+  const { t } = useTranslation('pages');
   const { network } = useApi();
   const { selectedActivePool } = useActivePools();
   const { getMembersOfPool } = usePoolMembers();
@@ -17,24 +18,23 @@ export const Header = () => {
   const { state, points } = selectedActivePool?.bondedPool || {};
   const poolMembers = getMembersOfPool(selectedActivePool?.id ?? 0);
 
-  const bonded = toFixedIfNecessary(
-    planckBnToUnit(
-      points ? new BN(rmCommas(points)) : new BN(0),
-      network.units
-    ),
-    3
-  );
+  const bonded = planckToUnit(
+    new BigNumber(points ? rmCommas(points) : 0),
+    network.units
+  )
+    .decimalPlaces(3)
+    .toFormat();
 
   let stateDisplay;
   switch (state) {
-    case PoolState.Block:
-      stateDisplay = 'Locked';
+    case 'Blocked':
+      stateDisplay = t('pools.locked');
       break;
-    case PoolState.Destroy:
-      stateDisplay = 'Destroying';
+    case 'Destroying':
+      stateDisplay = t('pools.destroying');
       break;
     default:
-      stateDisplay = 'Open';
+      stateDisplay = t('pools.open');
       break;
   }
 
@@ -45,13 +45,13 @@ export const Header = () => {
           <div>
             <div className="inner">
               <h2>{stateDisplay}</h2>
-              <h4>Pool State</h4>
+              <h4>{t('pools.poolState')}</h4>
             </div>
           </div>
           <div>
             <div className="inner">
               <h2>{poolMembers.length}</h2>
-              <h4>Pool Members</h4>
+              <h4>{t('pools.poolMembers')}</h4>
             </div>
           </div>
           <div>
@@ -59,7 +59,7 @@ export const Header = () => {
               <h2>
                 {bonded} {network.unit}
               </h2>
-              <h4>Total Bonded</h4>
+              <h4>{t('pools.totalBonded')}</h4>
             </div>
           </div>
         </div>

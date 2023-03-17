@@ -1,15 +1,15 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { AnyApi, AnyMetaBatch, MaybeAccount, Sync } from 'types';
+import type BigNumber from 'bignumber.js';
+import type { AnyApi, AnyJson, AnyMetaBatch, MaybeAccount, Sync } from 'types';
 
 // PoolsConfig types
 export interface PoolsConfigContextState {
-  addFavourite: (a: string) => void;
-  removeFavourite: (a: string) => void;
+  addFavorite: (a: string) => void;
+  removeFavorite: (a: string) => void;
   createAccounts: (p: number) => PoolAddresses;
-  favourites: string[];
+  favorites: string[];
   stats: PoolStats;
 }
 
@@ -19,15 +19,15 @@ export interface PoolConfigState {
 }
 
 export interface PoolStats {
-  counterForPoolMembers: BN;
-  counterForBondedPools: BN;
-  counterForRewardPools: BN;
-  lastPoolId: BN;
-  maxPoolMembers: BN;
-  maxPoolMembersPerPool: BN;
-  maxPools: BN;
-  minCreateBond: BN;
-  minJoinBond: BN;
+  counterForPoolMembers: BigNumber;
+  counterForBondedPools: BigNumber;
+  counterForRewardPools: BigNumber;
+  lastPoolId: BigNumber;
+  maxPoolMembers: BigNumber;
+  maxPoolMembersPerPool: BigNumber;
+  maxPools: BigNumber;
+  minCreateBond: BigNumber;
+  minJoinBond: BigNumber;
 }
 
 // PoolMemberships types
@@ -41,8 +41,11 @@ export interface PoolMembership {
   poolId: number;
   points: string;
   lastRecordedRewardCounter: string;
-  unbondingEras: any;
-  unlocking: any;
+  unbondingEras: { [key: number]: string };
+  unlocking: Array<{
+    era: number;
+    value: BigNumber;
+  }>;
 }
 
 // BondedPool types
@@ -57,6 +60,7 @@ export interface BondedPoolsContextState {
   getPoolNominationStatusCode: (t: NominationStatuses | null) => string;
   getAccountRoles: (w: MaybeAccount) => any;
   getAccountPools: (w: MaybeAccount) => any;
+  replacePoolRoles: (poolId: number, roleEdits: AnyJson) => void;
   poolSearchFilter: (l: any, k: string, v: string) => void;
   bondedPools: Array<BondedPool>;
   meta: AnyMetaBatch;
@@ -133,14 +137,4 @@ export interface PoolAddresses {
 
 export type MaybePool = number | null;
 
-export enum PoolState {
-  /// The pool is open to be joined, and is working normally.
-  Open = 'Open',
-  /// The pool is blocked. No one else can join.
-  Block = 'Blocked',
-  /// The pool is in the process of being destroyed.
-  ///
-  /// All members can now be permissionlessly unbonded, and the pool can never go back to any
-  /// other state other than being dissolved.
-  Destroy = 'Destroying',
-}
+export type PoolState = 'Open' | 'Blocked' | 'Destroying';

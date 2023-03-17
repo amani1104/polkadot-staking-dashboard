@@ -1,17 +1,9 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import styled from 'styled-components';
-import {
-  borderPrimary,
-  textPrimary,
-  backgroundDropdown,
-  textSecondary,
-  borderSecondary,
-} from 'theme';
 
-export const StyledDownshift = styled.div`
-  box-sizing: border-box;
+export const StyledSelect = styled.div`
   position: relative;
   width: 100%;
   height: auto;
@@ -27,26 +19,23 @@ export const StyledDownshift = styled.div`
     margin-bottom: 1rem;
 
     > span {
+      color: var(--text-color-secondary);
       margin: 0 0.75rem;
-      color: ${textSecondary};
       opacity: 0.5;
     }
   }
 
   /* input element of dropdown */
   .input-wrap {
-    border-bottom: 1px solid ${borderPrimary};
+    border-bottom: 1px solid var(--border-primary-color);
     display: flex;
     flex-flow: row wrap;
     align-items: center;
-    box-sizing: border-box;
     padding: 0.25rem 0 0 0;
-    margin: 0.25rem 0.7rem 0 0.7rem;
+    margin: 0.25rem 0rem 0 0rem;
     flex: 1;
 
     &.selected {
-      border: 1px solid ${borderPrimary};
-      border-radius: 1rem;
       margin: 0;
       padding: 0.1rem 0.75rem;
     }
@@ -55,7 +44,6 @@ export const StyledDownshift = styled.div`
   /* input element of dropdown */
   .input {
     border: none;
-    box-sizing: border-box;
     padding-left: 0.75rem;
     flex: 1;
     text-overflow: ellipsis;
@@ -65,8 +53,7 @@ export const StyledDownshift = styled.div`
 `;
 
 export const StyledController = styled.button<any>`
-  color: ${textPrimary};
-  box-sizing: border-box;
+  color: var(--text-color-primary);
   border: none;
   position: absolute;
   right: 0.5rem;
@@ -82,49 +69,59 @@ export const StyledController = styled.button<any>`
 
 /* dropdown box for vertical scroll */
 export const StyledDropdown = styled.div<any>`
-  background: ${backgroundDropdown};
+  border: 1px solid var(--border-primary-color);
   position: relative;
-  box-sizing: border-box;
   margin: 0.5rem 0 0;
-  border-bottom: none;
   border-radius: 0.75rem;
   z-index: 1;
 
   .items {
-    box-sizing: border-box;
-    width: auto;
+    width: 100%;
     height: ${(props) => (props.height ? props.height : 'auto')};
     overflow: auto;
 
-    .item {
-      box-sizing: border-box;
-      padding: 0.5rem;
+    button {
+      width: 100%;
       cursor: pointer;
-      margin: 0.25rem;
+      opacity: 1;
+      padding: 0.5rem;
+      margin: 0.25rem 0;
       border-radius: 0.75rem;
       display: flex;
       flex-flow: row wrap;
-      justify-content: flex-start;
       align-items: center;
+      border: 2px solid;
+      border-color: var(--transparent-color);
+
+      &.inactive {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      &.selected {
+        border-color: var(--network-color-primary);
+      }
 
       .icon {
         margin-right: 0.5rem;
       }
+
       span {
-        color: ${textSecondary};
-        border: 1px solid ${borderSecondary};
+        color: var(--text-color-secondary);
+        border: 1px solid var(--border-secondary-color);
         border-radius: 0.5rem;
         padding: 0.2rem 0.5rem;
         font-size: 0.9rem;
         margin-right: 0.5rem;
       }
       p {
+        color: var(--text-color-primary);
         font-size: 1rem;
-        color: ${textPrimary};
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
         flex: 1;
+        text-align: left;
       }
     }
   }

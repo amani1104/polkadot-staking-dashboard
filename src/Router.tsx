@@ -1,48 +1,50 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useRef } from 'react';
-import {
-  Routes,
-  Route,
-  HashRouter,
-  useLocation,
-  Navigate,
-} from 'react-router-dom';
+import { PAGES_CONFIG } from 'config/pages';
+import { useApi } from 'contexts/Api';
+import { useUi } from 'contexts/UI';
 import { AnimatePresence } from 'framer-motion';
-import { Helmet } from 'react-helmet';
+import { ErrorFallbackApp, ErrorFallbackRoutes } from 'library/ErrorBoundary';
+import { Headers } from 'library/Headers';
+import { Help } from 'library/Help';
 import { Menu } from 'library/Menu';
+import { NetworkBar } from 'library/NetworkBar';
+import { Notifications } from 'library/Notifications';
+import { Overlay } from 'library/Overlay';
+import { SideMenu } from 'library/SideMenu';
+import { Tooltip } from 'library/Tooltip';
+import { Modal } from 'modals';
+import { useEffect, useRef } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { Helmet } from 'react-helmet';
+import { useTranslation } from 'react-i18next';
 import {
+  HashRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
+import {
+  BodyInterfaceWrapper,
+  MainInterfaceWrapper,
   PageWrapper,
   SideInterfaceWrapper,
-  MainInterfaceWrapper,
-  BodyInterfaceWrapper,
 } from 'Wrappers';
-import { PAGES_CONFIG } from 'config/pages';
-import { NetworkBar } from 'library/NetworkBar';
-import { Modal } from 'modals';
-import { Headers } from 'library/Headers';
-import SideMenu from 'library/SideMenu';
-import { Help } from 'library/Help';
-import Notifications from 'library/Notifications';
-import { TITLE_DEFAULT } from 'consts';
-import { useUi } from 'contexts/UI';
-import { useApi } from 'contexts/Api';
-import { Tooltip } from 'library/Tooltip';
-import { ErrorBoundary } from 'react-error-boundary';
-import { ErrorFallbackRoutes, ErrorFallbackApp } from 'library/ErrorBoundary';
 
 export const RouterInner = () => {
-  const { network } = useApi();
+  const { t } = useTranslation('base');
   const { pathname } = useLocation();
+  const { network } = useApi();
   const { sideMenuOpen, sideMenuMinimised, setContainerRefs } = useUi();
 
-  // scroll to top of the window on every page change or network change
+  // scroll to top of the window on every page change or network change.
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname, network]);
 
-  // set references to UI context and make available throughout app
+  // set references to UI context and make available throughout app.
   useEffect(() => {
     setContainerRefs({
       mainInterface: mainInterfaceRef,
@@ -54,17 +56,20 @@ export const RouterInner = () => {
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallbackApp}>
-      {/* Modal: closed by default */}
-      <Modal />
       <BodyInterfaceWrapper>
+        {/* Modal: closed by default */}
+        <Modal />
         {/* Help: closed by default */}
         <Help />
+
+        {/* Menu: closed by default */}
+        <Menu />
 
         {/* Tooltip: invisible by default */}
         <Tooltip />
 
-        {/* Menu: closed by default */}
-        <Menu />
+        {/* Overlay: closed by default */}
+        <Overlay />
 
         {/* Left side menu */}
         <SideInterfaceWrapper open={sideMenuOpen} minimised={sideMenuMinimised}>
@@ -79,23 +84,25 @@ export const RouterInner = () => {
           <ErrorBoundary FallbackComponent={ErrorFallbackRoutes}>
             <AnimatePresence>
               <Routes>
-                {PAGES_CONFIG.map((page, pageIndex) => {
-                  const { Entry } = page;
+                {PAGES_CONFIG.map((page, i) => {
+                  const { Entry, hash, key } = page;
 
                   return (
                     <Route
-                      key={`main_interface_page_${pageIndex}`}
-                      path={page.hash}
+                      key={`main_interface_page_${i}`}
+                      path={hash}
                       element={
                         <PageWrapper
-                          key={`main_interface_key__${pageIndex}`}
+                          key={`main_interface_key__${i}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
                           transition={{ duration: 0.2 }}
                         >
                           <Helmet>
-                            <title>{`${page.title} : ${TITLE_DEFAULT}`}</title>
+                            <title>{`${t(key)} : ${t('title', {
+                              context: `${network.name}`,
+                            })}`}</title>
                           </Helmet>
                           <Entry page={page} />
                         </PageWrapper>
@@ -123,11 +130,8 @@ export const RouterInner = () => {
   );
 };
 
-export const Router = () => {
-  return (
-    <HashRouter basename="/">
-      <RouterInner />
-    </HashRouter>
-  );
-};
-export default Router;
+export const Router = () => (
+  <HashRouter basename="/">
+    <RouterInner />
+  </HashRouter>
+);

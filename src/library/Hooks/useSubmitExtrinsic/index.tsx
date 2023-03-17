@@ -1,33 +1,37 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { useState, useEffect } from 'react';
+import BigNumber from 'bignumber.js';
+import { DappName } from 'consts';
 import { useApi } from 'contexts/Api';
-import { useNotifications } from 'contexts/Notifications';
-import { useExtrinsics } from 'contexts/Extrinsics';
 import { useConnect } from 'contexts/Connect';
-import { DAPP_NAME } from 'consts';
-import { AnyApi } from 'types';
-import { Extension } from 'contexts/Connect/types';
+import { useExtensions } from 'contexts/Extensions';
+import type { ExtensionInjected } from 'contexts/Extensions/types';
+import { useExtrinsics } from 'contexts/Extrinsics';
+import { useNotifications } from 'contexts/Notifications';
 import { useTxFees } from 'contexts/TxFees';
-import { UseSubmitExtrinsic, UseSubmitExtrinsicProps } from './types';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { AnyApi } from 'types';
+import type { UseSubmitExtrinsic, UseSubmitExtrinsicProps } from './types';
 
-export const useSubmitExtrinsic = (
-  extrinsic: UseSubmitExtrinsicProps
-): UseSubmitExtrinsic => {
-  // extract extrinsic info
-  const { tx, shouldSubmit, callbackSubmit, callbackInBlock } = extrinsic;
-
-  // if null account is provided, fallback to empty string
-  const { from } = extrinsic;
-  const submitAddress: string = from ?? '';
-
+export const useSubmitExtrinsic = ({
+  tx,
+  shouldSubmit,
+  callbackSubmit,
+  callbackInBlock,
+  from,
+}: UseSubmitExtrinsicProps): UseSubmitExtrinsic => {
+  const { t } = useTranslation('library');
   const { api } = useApi();
   const { setTxFees, setSender, txFees } = useTxFees();
   const { addNotification } = useNotifications();
   const { addPending, removePending } = useExtrinsics();
-  const { getAccount, extensions } = useConnect();
+  const { extensions } = useExtensions();
+  const { getAccount } = useConnect();
+
+  // if null account is provided, fallback to empty string
+  const submitAddress: string = from ?? '';
 
   // whether the transaction is in progress
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +48,7 @@ export const useSubmitExtrinsic = (
     }
     // get payment info
     const { partialFee } = await tx.paymentInfo(submitAddress);
-    const partialFeeBn = new BN(partialFee.toString());
+    const partialFeeBn = new BigNumber(partialFee.toString());
 
     // give tx fees to global useTxFees context
     if (partialFeeBn.toString() !== txFees.toString()) {
@@ -67,17 +71,21 @@ export const useSubmitExtrinsic = (
 
     const { signer, source } = account;
 
-    const extension = extensions.find((e: Extension) => e.id === source);
+    // TODO: refactor to take into consideration source = ledger.
+    const extension = extensions.find(
+      (e: ExtensionInjected) => e.id === source
+    );
     if (extension === undefined) {
-      throw new Error('wallet not found');
+      throw new Error(`${t('walletNotFound')}`);
     } else {
       // summons extension popup if not already connected.
-      extension.enable(DAPP_NAME);
+      extension.enable(DappName);
     }
 
     // pre-submission state update
     setSubmitting(true);
 
+    // TODO: sign payload on ledger device and send.
     try {
       const unsub = await tx.signAndSend(
         from,
@@ -87,8 +95,8 @@ export const useSubmitExtrinsic = (
           if (status.isReady) {
             addPending(accountNonce);
             addNotification({
-              title: 'Pending',
-              subtitle: 'Transaction was initiated.',
+              title: t('pending'),
+              subtitle: t('transactionInitiated'),
             });
             callbackSubmit();
           }
@@ -98,8 +106,8 @@ export const useSubmitExtrinsic = (
             setSubmitting(false);
             removePending(accountNonce);
             addNotification({
-              title: 'In Block',
-              subtitle: 'Transaction in block',
+              title: t('inBlock'),
+              subtitle: t('transactionInBlock'),
             });
             callbackInBlock();
           }
@@ -109,14 +117,14 @@ export const useSubmitExtrinsic = (
             events.forEach(({ event: { method } }: AnyApi) => {
               if (method === 'ExtrinsicSuccess') {
                 addNotification({
-                  title: 'Finalized',
-                  subtitle: 'Transaction successful',
+                  title: t('finalized'),
+                  subtitle: t('transactionSuccessful'),
                 });
                 unsub();
               } else if (method === 'ExtrinsicFailed') {
                 addNotification({
-                  title: 'Failed',
-                  subtitle: 'Error with transaction',
+                  title: t('failed'),
+                  subtitle: t('errorWithTransaction'),
                 });
                 setSubmitting(false);
                 removePending(accountNonce);
@@ -130,8 +138,8 @@ export const useSubmitExtrinsic = (
       setSubmitting(false);
       removePending(accountNonce);
       addNotification({
-        title: 'Cancelled',
-        subtitle: 'Transaction was cancelled',
+        title: t('cancelled'),
+        subtitle: t('transactionCancelled'),
       });
     }
   };

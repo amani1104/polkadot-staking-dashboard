@@ -1,21 +1,22 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserSlash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTooltip } from 'contexts/Tooltip';
 import { TooltipPosition, TooltipTrigger } from 'library/ListItem/Wrappers';
-import { BlockedProps } from '../types';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { BlockedProps } from '../types';
 
-export const Blocked = (props: BlockedProps) => {
-  const { prefs } = props;
+export const Blocked = ({ prefs }: BlockedProps) => {
+  const { t } = useTranslation('library');
   const blocked = prefs?.blocked ?? null;
   const { setTooltipPosition, setTooltipMeta, open } = useTooltip();
 
   const posRef = useRef(null);
 
-  const tooltipText = 'Blocking Nominations';
+  const tooltipText = t('blockingNominations');
 
   const toggleTooltip = () => {
     if (!open) {
@@ -46,5 +47,3 @@ export const Blocked = (props: BlockedProps) => {
     </>
   );
 };
-
-export default Blocked;

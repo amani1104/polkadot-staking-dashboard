@@ -1,49 +1,46 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useState, useRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faProjectDiagram } from '@fortawesome/free-solid-svg-icons';
 import { faCopy } from '@fortawesome/free-regular-svg-icons';
-import { useModal } from 'contexts/Modal';
-import { useActivePools } from 'contexts/Pools/ActivePools';
-import { useBondedPools } from 'contexts/Pools/BondedPools';
-import { usePoolsTabs } from 'pages/Pools/Home/context';
+import { faBars, faProjectDiagram } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useConnect } from 'contexts/Connect';
-import {
-  Wrapper,
-  Labels,
-  Separator,
-  MenuPosition,
-} from 'library/ListItem/Wrappers';
 import { useMenu } from 'contexts/Menu';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { NotificationText } from 'contexts/Notifications/types';
+import { useModal } from 'contexts/Modal';
 import { useNotifications } from 'contexts/Notifications';
-import { useStaking } from 'contexts/Staking';
-import { useValidators } from 'contexts/Validators';
-import { FavouritePool } from 'library/ListItem/Labels/FavouritePool';
+import type { NotificationText } from 'contexts/Notifications/types';
+import { useBondedPools } from 'contexts/Pools/BondedPools';
+import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
 import { useUi } from 'contexts/UI';
+import { useValidators } from 'contexts/Validators';
+import { FavoritePool } from 'library/ListItem/Labels/FavoritePool';
 import { PoolBonded } from 'library/ListItem/Labels/PoolBonded';
-import { PoolState } from 'contexts/Pools/types';
 import { PoolIdentity } from 'library/ListItem/Labels/PoolIdentity';
-import { PoolProps } from './types';
-import { Members } from '../ListItem/Labels/Members';
+import {
+  Labels,
+  MenuPosition,
+  Separator,
+  Wrapper,
+} from 'library/ListItem/Wrappers';
+import { usePoolsTabs } from 'pages/Pools/Home/context';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { JoinPool } from '../ListItem/Labels/JoinPool';
+import { Members } from '../ListItem/Labels/Members';
 import { PoolId } from '../ListItem/Labels/PoolId';
+import type { PoolProps } from './types';
 
-export const Pool = (props: PoolProps) => {
-  const { pool, batchKey, batchIndex } = props;
+export const Pool = ({ pool, batchKey, batchIndex }: PoolProps) => {
+  const { t } = useTranslation('library');
   const { memberCounter, addresses, id, state } = pool;
 
   const { openModalWith } = useModal();
   const { activeAccount, isReadOnlyAccount } = useConnect();
   const { meta } = useBondedPools();
-  const { isBonding } = useActivePools();
+  const { membership } = usePoolMemberships();
   const { addNotification } = useNotifications();
-  const { eraStakers, getNominationsStatusFromTargets } = useStaking();
   const { validators } = useValidators();
-  const { isSyncing } = useUi();
+  const { isPoolSyncing } = useUi();
 
   // assumes component is under `PoolsTabsProvider` (Pools page)
   const { setActiveTab } = usePoolsTabs();
@@ -60,38 +57,6 @@ export const Pool = (props: PoolProps) => {
     targets.includes(v.address)
   );
 
-  const [nominationsStatus, setNominationsStatus] = useState<{
-    [key: string]: string;
-  } | null>(null);
-
-  // update pool nomination status as nominations metadata becomes available.
-  // we cannot add effect dependencies here as this needs to trigger
-  // as soon as the component displays. (upon tab change).
-  const handleNominationsStatus = () => {
-    const _nominationStatus = getNominationsStatusFromTargets(
-      addresses.stash,
-      targets
-    );
-    setNominationsStatus(_nominationStatus);
-  };
-
-  // recalculate nominations status as app syncs
-  useEffect(() => {
-    if (
-      nominationsStatus === null &&
-      eraStakers.stakers.length &&
-      nominations.length
-    ) {
-      handleNominationsStatus();
-    }
-  });
-
-  // metadata has changed, which means pool items may have been added.
-  // recalculate nominations status
-  useEffect(() => {
-    handleNominationsStatus();
-  }, [meta]);
-
   // configure floating menu position
   const posRef = useRef(null);
 
@@ -100,7 +65,7 @@ export const Pool = (props: PoolProps) => {
     addresses.stash == null
       ? null
       : {
-          title: 'Address Copied to Clipboard',
+          title: t('addressCopiedToClipboard'),
           subtitle: addresses.stash,
         };
 
@@ -109,9 +74,9 @@ export const Pool = (props: PoolProps) => {
 
   // add view pool nominations button to menu
   menuItems.push({
-    icon: <FontAwesomeIcon icon={faProjectDiagram as IconProp} />,
+    icon: <FontAwesomeIcon icon={faProjectDiagram} />,
     wrap: null,
-    title: `View Pool Nominations`,
+    title: `${t('viewPoolNominations')}`,
     cb: () => {
       openModalWith(
         'PoolNominations',
@@ -126,9 +91,9 @@ export const Pool = (props: PoolProps) => {
 
   // add copy pool address button to menu
   menuItems.push({
-    icon: <FontAwesomeIcon icon={faCopy as IconProp} />,
+    icon: <FontAwesomeIcon icon={faCopy} />,
     wrap: null,
-    title: `Copy Pool Address`,
+    title: t('copyPoolAddress'),
     cb: () => {
       navigator.clipboard.writeText(addresses.stash);
       if (notificationCopyAddress) {
@@ -157,7 +122,7 @@ export const Pool = (props: PoolProps) => {
           />
           <div>
             <Labels>
-              <FavouritePool address={addresses.stash} />
+              <FavoritePool address={addresses.stash} />
               <PoolId id={id} />
               <Members members={memberCounter} />
               <button
@@ -173,9 +138,9 @@ export const Pool = (props: PoolProps) => {
         <Separator />
         <div className="row status">
           <PoolBonded pool={pool} batchIndex={batchIndex} batchKey={batchKey} />
-          {!isSyncing &&
-            state === PoolState.Open &&
-            !isBonding() &&
+          {!isPoolSyncing &&
+            state === 'Open' &&
+            !membership &&
             !isReadOnlyAccount(activeAccount) &&
             activeAccount && (
               <Labels>
@@ -187,5 +152,3 @@ export const Pool = (props: PoolProps) => {
     </Wrapper>
   );
 };
-
-export default Pool;

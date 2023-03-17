@@ -1,9 +1,9 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { BondedPool } from 'contexts/Pools/types';
-import React from 'react';
-import { AnyMetaBatch, MaybeAccount } from 'types';
+import type { BondedPool } from 'contexts/Pools/types';
+import type React from 'react';
+import type { BondFor, MaybeAccount } from 'types';
 
 export interface BlockedProps {
   prefs: {
@@ -13,12 +13,10 @@ export interface BlockedProps {
 }
 
 export interface CopyAddressProps {
-  validator: {
-    address: string;
-  };
+  address: string;
 }
 
-export interface FavouriteProps {
+export interface FavoriteProps {
   address: string;
 }
 
@@ -26,7 +24,6 @@ export interface IdentityProps {
   address: string;
   batchIndex: number;
   batchKey: string;
-  meta: AnyMetaBatch;
 }
 
 export interface PoolIdentityProps {
@@ -42,7 +39,7 @@ export interface MetricsProps {
 
 export interface NominationStatusProps {
   address: string;
-  bondType: string;
+  bondFor: BondFor;
   nominator: MaybeAccount;
 }
 

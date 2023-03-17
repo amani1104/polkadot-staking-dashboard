@@ -1,36 +1,36 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import {
-  faServer,
-  faExternalLink,
-  faEnvelope,
-} from '@fortawesome/free-solid-svg-icons';
 import { faTwitter } from '@fortawesome/free-brands-svg-icons';
+import {
+  faEnvelope,
+  faExternalLink,
+  faServer,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useApi } from 'contexts/Api';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { useModal } from 'contexts/Modal';
-import { ItemWrapper } from './Wrappers';
+import { lazy, Suspense, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCommunitySections } from './context';
-import { ItemProps } from './types';
+import type { ItemProps } from './types';
+import { ItemWrapper } from './Wrappers';
 
-export const Item = (props: ItemProps) => {
+export const Item = ({ item, actionable }: ItemProps) => {
+  const { t } = useTranslation('pages');
   const { openModalWith } = useModal();
   const { network } = useApi();
 
-  const { item, actionable } = props;
   const {
     bio,
     name,
     email,
     twitter,
     website,
-    Thumbnail,
+    thumbnail,
     validators: entityAllValidators,
   } = item;
-  const validatorCount =
-    entityAllValidators[network.name.toLowerCase()]?.length ?? 0;
+  const validatorCount = entityAllValidators[network.name]?.length ?? 0;
 
   const { setActiveSection, setActiveItem, setScrollPos } =
     useCommunitySections();
@@ -54,13 +54,24 @@ export const Item = (props: ItemProps) => {
     },
   };
 
+  const Thumbnail = useMemo(
+    () =>
+      lazy(() => import(`../../config/validators/thumbnails/${thumbnail}.tsx`)),
+    []
+  );
+
   return (
     <ItemWrapper
-      whileHover={{ scale: actionable ? 1.005 : 1 }}
+      whileHover={{ scale: 1.005 }}
+      transition={{ duration: 0.15 }}
       variants={listItem}
     >
       <div className="inner">
-        <section>{Thumbnail !== null && <Thumbnail />}</section>
+        <section>
+          <Suspense fallback={<div />}>
+            <Thumbnail />
+          </Suspense>
+        </section>
         <section>
           <h3>
             {name}
@@ -69,7 +80,7 @@ export const Item = (props: ItemProps) => {
               onClick={() => openModalWith('Bio', { name, bio }, 'large')}
               className="active"
             >
-              <span>Bio</span>
+              <span>{t('community.bio')}</span>
             </button>
           </h3>
 
@@ -92,8 +103,9 @@ export const Item = (props: ItemProps) => {
                 transform="shrink-1"
               />
               <h4>
-                {validatorCount} Validator
-                {validatorCount !== 1 && 's'}
+                {t('community.validator', {
+                  count: validatorCount,
+                })}
               </h4>
             </button>
             {email !== undefined && (
@@ -109,7 +121,7 @@ export const Item = (props: ItemProps) => {
                   transform="shrink-1"
                   className="icon-left"
                 />
-                <h4>email</h4>
+                <h4>{t('community.email')}</h4>
                 <FontAwesomeIcon
                   icon={faExternalLink}
                   className="icon-right"
@@ -125,10 +137,7 @@ export const Item = (props: ItemProps) => {
                   window.open(`https://twitter.com/${twitter}`, '_blank');
                 }}
               >
-                <FontAwesomeIcon
-                  icon={faTwitter as IconProp}
-                  className="icon-left"
-                />
+                <FontAwesomeIcon icon={faTwitter} className="icon-left" />
                 <h4>{twitter}</h4>
                 <FontAwesomeIcon
                   icon={faExternalLink}
@@ -145,7 +154,7 @@ export const Item = (props: ItemProps) => {
                   window.open(website, '_blank');
                 }}
               >
-                <h4>website</h4>
+                <h4>{t('community.website')}</h4>
                 <FontAwesomeIcon
                   icon={faExternalLink}
                   className="icon-right"
@@ -159,5 +168,3 @@ export const Item = (props: ItemProps) => {
     </ItemWrapper>
   );
 };
-
-export default Item;

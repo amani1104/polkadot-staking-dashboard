@@ -1,19 +1,9 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { SectionFullWidthThreshold, SideMenuStickyThreshold } from 'consts';
 import styled from 'styled-components';
-import { SIDE_MENU_STICKY_THRESHOLD } from 'consts';
-import {
-  textSecondary,
-  backgroundSecondary,
-  cardBorder,
-  borderPrimary,
-  cardShadow,
-  shadowColor,
-  networkColor,
-  textPrimary,
-} from 'theme';
-import {
+import type {
   CardHeaderWrapperProps,
   CardWrapperProps,
   GraphWrapperProps,
@@ -33,26 +23,23 @@ export const CardHeaderWrapper = styled.div<CardHeaderWrapperProps>`
 
   h2,
   h3 {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
     display: flex;
     flex-flow: row wrap;
     align-items: center;
     flex-grow: ${(props) => (props.withAction ? 1 : 0)};
-
-    .help-icon {
-      margin-left: 0.6rem;
-    }
   }
   h4 {
     margin: 0 0 0.6rem 0;
     display: flex;
     flex-flow: row wrap;
     align-items: center;
-    justify-content: flex-start;
+    flex-grow: ${(props) => (props.withAction ? 1 : 0)};
+  }
 
-    .help-icon {
-      margin-left: 0.5rem;
-    }
+  > div {
+    display: flex;
+    align-items: center;
   }
 `;
 
@@ -61,17 +48,13 @@ export const CardHeaderWrapper = styled.div<CardHeaderWrapperProps>`
  * Used to separate the main modules throughout the app.
  */
 export const CardWrapper = styled.div<CardWrapperProps>`
-  border: ${cardBorder} ${borderPrimary};
-  box-shadow: ${cardShadow} ${shadowColor};
-  box-sizing: border-box;
+  box-shadow: var(--card-shadow) var(--card-shadow-color);
+  background: var(--background-primary);
   padding: ${(props) =>
     props.noPadding ? '0rem' : props.transparent ? '0rem 0rem' : '1.2rem'};
   border-radius: 1.1rem;
-  background: ${(props) => (props.transparent ? 'none' : backgroundSecondary)};
   display: flex;
   flex-flow: column nowrap;
-  align-content: flex-start;
-  align-items: flex-start;
   flex: 1;
   width: 100%;
   margin-top: ${(props) => (props.transparent ? '0rem' : '1.4rem')};
@@ -84,7 +67,10 @@ export const CardWrapper = styled.div<CardWrapperProps>`
     background: none;
   `}
 
-  @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
+  ${(props) =>
+    props.warning ? 'border: 1px solid var(--status-warning-color);' : ''}
+
+  @media (max-width: ${SideMenuStickyThreshold}px) {
     padding: ${(props) =>
       props.noPadding
         ? '0rem'
@@ -93,13 +79,12 @@ export const CardWrapper = styled.div<CardWrapperProps>`
         : '1rem 0.75rem'};
   }
 
-  @media (min-width: ${SIDE_MENU_STICKY_THRESHOLD + 1}px) {
+  @media (min-width: ${SideMenuStickyThreshold + 1}px) {
     height: ${(props) => (props.height ? `${props.height}px` : 'inherit')};
   }
 
   .content {
     padding: 0 0.5rem;
-
     h3 {
       margin-bottom: 0.75rem;
     }
@@ -113,8 +98,6 @@ export const CardWrapper = styled.div<CardWrapperProps>`
     padding: 1rem;
     display: flex;
     flex-flow: column nowrap;
-    align-content: flex-start;
-    align-items: flex-start;
     width: 100%;
     position: relative;
   }
@@ -133,15 +116,12 @@ export const CardWrapper = styled.div<CardWrapperProps>`
  */
 
 export const GraphWrapper = styled.div<GraphWrapperProps>`
-  border: ${cardBorder} ${borderPrimary};
-  box-shadow: ${cardShadow} ${shadowColor};
-  box-sizing: border-box;
+  box-shadow: var(--card-shadow) var(--card-shadow-color);
+  background: ${(props) =>
+    props.transparent ? 'none' : 'var(--background-primary)'};
   border-radius: 1rem;
-  background: ${backgroundSecondary};
   display: flex;
   flex-flow: column nowrap;
-  align-content: flex-start;
-  align-items: flex-start;
   flex: 1;
   position: relative;
   overflow: hidden;
@@ -152,6 +132,13 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
     border: none;
     box-shadow: none;
     background: none;
+  `}
+  ${(props) =>
+    props.minHeight &&
+    `
+    @media(min-width: ${SectionFullWidthThreshold + 1}px) {
+      min-height: ${props.minHeight}px;
+    }
   `}
 
   .inner {
@@ -164,7 +151,7 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
     right: 10px;
     top: 10px;
     font-size: 0.8rem;
-    background: ${networkColor};
+    background: var(--network-color-primary);
     border-radius: 0.3rem;
     padding: 0.2rem 0.4rem;
     color: #fff;
@@ -190,10 +177,9 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
     flex-flow: row wrap;
     align-content: flex-end;
     align-items: flex-end;
-    justify-content: flex-start;
 
     .fiat {
-      color: ${textSecondary};
+      color: var(--text-color-secondary);
       font-size: 1.1rem;
       margin-top: 0.2rem;
       margin-left: 0.3rem;
@@ -202,7 +188,6 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
   h2 {
     display: flex;
     flex-flow: row wrap;
-    justify-content: flex-start;
     align-items: center;
   }
   p {
@@ -211,15 +196,11 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
   h4 {
     align-items: center;
     margin-top: 0.4rem;
-
-    .help-icon {
-      margin-left: 0.55rem;
-    }
   }
 
   h5 {
     &.secondary {
-      color: ${textSecondary};
+      color: var(--text-color-secondary);
       opacity: 0.7;
       margin-bottom: 0;
       margin-top: 1.5rem;
@@ -236,18 +217,15 @@ export const GraphWrapper = styled.div<GraphWrapperProps>`
     flex-flow: row wrap;
     justify-content: center;
     width: 100%;
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.75rem;
   }
   .graph_line {
     margin-top: 0.6rem;
-    padding: 0rem 1rem 0.5rem 0rem;
+    padding: 0rem 0rem 0.5rem 1.5rem;
   }
   .graph_with_extra {
     width: 100%;
     display: flex;
-    flex-flow: row nowrap;
-    justify-content: flex-start;
-    align-items: flex-start;
     height: 190px;
     flex: 1;
 

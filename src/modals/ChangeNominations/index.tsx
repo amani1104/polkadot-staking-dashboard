@@ -1,29 +1,24 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStopCircle } from '@fortawesome/free-solid-svg-icons';
 import { faArrowAltCircleUp } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { useBalances } from 'contexts/Balances';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import { useBalances } from 'contexts/Accounts/Balances';
 import { useApi } from 'contexts/Api';
-import { useModal } from 'contexts/Modal';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
 import { useConnect } from 'contexts/Connect';
-import { Warning } from 'library/Form/Warning';
+import { useModal } from 'contexts/Modal';
 import { useActivePools } from 'contexts/Pools/ActivePools';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
 import { useTxFees } from 'contexts/TxFees';
-import { Title } from 'library/Modal/Title';
-import {
-  FooterWrapper,
-  Separator,
-  NotesWrapper,
-  PaddingWrapper,
-} from '../Wrappers';
+import { Warning } from 'library/Form/Warning';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
+import { Close } from 'library/Modal/Close';
+import { SubmitTx } from 'library/SubmitTx';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { PaddingWrapper, Separator, WarningsWrapper } from '../Wrappers';
 
 export const ChangeNominations = () => {
+  const { t } = useTranslation('modals');
   const { api } = useApi();
   const { activeAccount, accountHasSigner } = useConnect();
   const { getBondedAccount, getAccountNominations } = useBalances();
@@ -32,10 +27,10 @@ export const ChangeNominations = () => {
     useActivePools();
   const { txFeesValid } = useTxFees();
 
-  const { nominations: newNominations, provider, bondType } = config;
+  const { nominations: newNominations, provider, bondFor } = config;
 
-  const isPool = bondType === 'pool';
-  const isStaking = bondType === 'stake';
+  const isPool = bondFor === 'pool';
+  const isStaking = bondFor === 'nominator';
   const controller = getBondedAccount(activeAccount);
   const signingAccount = isPool ? activeAccount : controller;
 
@@ -64,10 +59,10 @@ export const ChangeNominations = () => {
   }, [isValid]);
 
   // tx to submit
-  const tx = () => {
-    let _tx = null;
+  const getTx = () => {
+    let tx = null;
     if (!valid || !api) {
-      return _tx;
+      return tx;
     }
 
     // targets submission differs between staking and pools
@@ -82,26 +77,26 @@ export const ChangeNominations = () => {
     if (isPool) {
       // if nominations remain, call nominate
       if (remaining !== 0) {
-        _tx = api.tx.nominationPools.nominate(
+        tx = api.tx.nominationPools.nominate(
           selectedActivePool?.id || 0,
           targetsToSubmit
         );
       } else {
         // wishing to stop all nominations, call chill
-        _tx = api.tx.nominationPools.chill(selectedActivePool?.id || 0);
+        tx = api.tx.nominationPools.chill(selectedActivePool?.id || 0);
       }
     } else if (isStaking) {
       if (remaining !== 0) {
-        _tx = api.tx.staking.nominate(targetsToSubmit);
+        tx = api.tx.staking.nominate(targetsToSubmit);
       } else {
-        _tx = api.tx.staking.chill();
+        tx = api.tx.staking.chill();
       }
     }
-    return _tx;
+    return tx;
   };
 
   const { submitTx, submitting } = useSubmitExtrinsic({
-    tx: tx(),
+    tx: getTx(),
     from: signingAccount,
     shouldSubmit: valid,
     callbackSubmit: () => {
@@ -116,65 +111,62 @@ export const ChangeNominations = () => {
     callbackInBlock: () => {},
   });
 
+  const warnings = [];
+  if (!nominations.length) {
+    warnings.push(<Warning text={t('noNominationsSet')} />);
+  }
+  if (!accountHasSigner(signingAccount)) {
+    warnings.push(
+      <Warning
+        text={`${
+          bondFor === 'nominator'
+            ? t('youMust', { context: 'controller' })
+            : t('youMust', { context: 'account' })
+        }`}
+      />
+    );
+  }
+
   return (
     <>
-      <Title title="Stop Nominating" icon={faStopCircle} />
-      <PaddingWrapper verticalOnly>
-        <div
-          style={{
-            padding: '0 1.25rem',
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
-          {!nominations.length && (
-            <Warning text="You have no nominations set." />
-          )}
-          {!accountHasSigner(signingAccount) && (
-            <Warning
-              text={`You must have your${
-                bondType === 'stake' ? ' controller ' : ' '
-              }account imported to stop nominating.`}
-            />
-          )}
-          <h2>
-            Stop {!remaining ? 'All Nomination' : `${removing} Nomination`}
-            {removing === 1 ? '' : 's'}
-          </h2>
-          <Separator />
-          <NotesWrapper>
-            <p>
-              Once submitted, your nominations will be removed from your
-              dashboard immediately, and will not be nominated from the start of
-              the next era.
-            </p>
-            <EstimatedTxFee />
-          </NotesWrapper>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => submitTx()}
-                disabled={
-                  !valid ||
-                  submitting ||
-                  !accountHasSigner(signingAccount) ||
-                  !txFeesValid
-                }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
-        </div>
+      <Close />
+      <PaddingWrapper>
+        <h2 className="title unbounded">
+          {t('stop')}{' '}
+          {!remaining
+            ? t('allNominations')
+            : `${t('nomination', { count: removing })}`}
+        </h2>
+        <Separator />
+        {warnings.length ? (
+          <WarningsWrapper noMargin>
+            {warnings.map((warning: React.ReactNode, index: number) => (
+              <React.Fragment key={`warning_${index}`}>
+                {warning}
+              </React.Fragment>
+            ))}
+          </WarningsWrapper>
+        ) : null}
+        <p>{t('changeNomination')}</p>
       </PaddingWrapper>
+      <SubmitTx
+        fromController={isStaking}
+        buttons={[
+          <ButtonSubmit
+            key="button_submit"
+            text={`${submitting ? t('submitting') : t('submit')}`}
+            iconLeft={faArrowAltCircleUp}
+            iconTransform="grow-2"
+            onClick={() => submitTx()}
+            disabled={
+              !valid ||
+              submitting ||
+              !accountHasSigner(signingAccount) ||
+              !txFeesValid
+            }
+          />,
+        ]}
+      />
     </>
   );
 };
-
-export default ChangeNominations;

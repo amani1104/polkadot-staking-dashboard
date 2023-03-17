@@ -1,41 +1,34 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import styled from 'styled-components';
+import { SmallFontSizeMaxWidth } from 'consts';
 import { motion } from 'framer-motion';
-import {
-  borderPrimary,
-  textSecondary,
-  networkColor,
-  modalBackground,
-  backgroundDropdown,
-  backgroundModalItem,
-} from 'theme';
-import { SMALL_FONT_SIZE_MAX_WIDTH } from 'consts';
+import styled from 'styled-components';
 
 export const Wrapper = styled.div<{ format?: string; inModal?: boolean }>`
   display: flex;
   flex-flow: row wrap;
   width: 100%;
-  height: ${(props) => (props.format === 'nomination' ? '6rem' : '3.2rem')};
+  height: ${(props) => (props.format === 'nomination' ? '6rem' : '3rem')};
   position: relative;
   margin: 0.5rem;
 
   > .inner {
+    box-shadow: 0px 1.75px 0px 1.25px var(--card-shadow-color-secondary);
     background: ${(props) =>
-      props.inModal ? backgroundModalItem : backgroundDropdown};
-    border: 1px solid ${borderPrimary};
+      props.inModal
+        ? 'var(--background-modal-item)'
+        : 'var(--background-list-item)'};
 
     ${(props) =>
       props.inModal &&
       `
+      box-shadow: none;
       border: none;`}
-    box-sizing: border-box;
     flex: 1;
     border-radius: 1rem;
     display: flex;
     flex-flow: row wrap;
-    justify-content: flex-start;
     align-items: center;
     flex: 1;
     overflow: hidden;
@@ -45,19 +38,15 @@ export const Wrapper = styled.div<{ format?: string; inModal?: boolean }>`
     width: 100%;
     height: 100%;
     padding: 0;
-
     .row {
-      box-sizing: border-box;
       flex: 1 0 100%;
-      height: 3.2rem;
+      height: 3.25rem;
       display: flex;
-      flex-flow: row nowrap;
-      justify-content: flex-start;
       align-items: center;
       padding: 0 0.5rem;
 
       &.status {
-        height: 2.8rem;
+        height: 2.75rem;
       }
       svg {
         margin: 0;
@@ -68,48 +57,50 @@ export const Wrapper = styled.div<{ format?: string; inModal?: boolean }>`
 
 export const Labels = styled.div`
   display: flex;
-  flex-flow: row nowrap;
   justify-content: flex-end;
   align-items: center;
   overflow: hidden;
   flex: 1 1 100%;
   padding: 0 0 0 0.25rem;
-  height: 3.2rem;
+  height: 2.75rem;
 
   button {
     padding: 0 0.1rem;
-    @media (min-width: ${SMALL_FONT_SIZE_MAX_WIDTH}px) {
+    @media (min-width: ${SmallFontSizeMaxWidth}px) {
       padding: 0 0.2rem;
     }
-
-    color: ${textSecondary};
+    color: var(--text-color-secondary);
     &:hover {
       opacity: 0.75;
     }
     &.active {
-      color: ${networkColor};
+      color: var(--network-color-primary);
     }
     &:disabled {
-      opacity: 0.35;
+      opacity: var(--opacity-disabled);
     }
   }
 
   .label {
+    color: var(--text-color-secondary);
     position: relative;
-    color: ${textSecondary};
+    display: flex;
+    align-items: center;
     margin: 0 0.2rem;
-    @media (min-width: ${SMALL_FONT_SIZE_MAX_WIDTH}px) {
+    @media (min-width: ${SmallFontSizeMaxWidth}px) {
       margin: 0 0.2rem;
-
       &.pool {
         margin: 0 0.4rem;
       }
+    }
+    button {
+      font-size: 1.1rem;
     }
     &.button-with-text {
       margin-right: 0;
 
       button {
-        color: ${networkColor};
+        color: var(--network-color-primary);
         font-size: 0.95rem;
         display: flex;
         flex-flow: row wrap;
@@ -132,9 +123,7 @@ export const Labels = styled.div`
 `;
 
 export const OverSubscribedWrapper = styled.div`
-  box-sizing: border-box;
   display: flex;
-  flex-flow: row nowrap;
   align-items: center;
   width: 100%;
   height: 100%;
@@ -147,10 +136,8 @@ export const OverSubscribedWrapper = styled.div`
   }
 `;
 export const IdentityWrapper = styled(motion.div)`
-  box-sizing: border-box;
   display: flex;
   margin-right: 0.5rem;
-  flex-flow: row nowrap;
   align-items: center;
   align-content: center;
   overflow: hidden;
@@ -160,26 +147,28 @@ export const IdentityWrapper = styled(motion.div)`
   .inner {
     display: flex;
     flex-flow: row wrap;
-    justify-content: flex-start;
     align-items: center;
     width: 100%;
-    height: 3.2rem;
-    padding: 0;
+    height: 3.25rem;
+    padding: 0 0 0 0.2rem;
   }
   h4 {
+    color: var(--text-color-secondary);
     position: absolute;
     top: 0;
     width: 100%;
-    height: 3.2rem;
-    line-height: 3.2rem;
-    padding: 0 0 0 0.4rem;
+    height: 3.25rem;
+    line-height: 3.25rem;
+    padding: 0 0 0 0.3rem;
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-variation-settings: 'wght' 600;
+    font-size: 1rem;
 
     > span {
-      color: ${textSecondary};
+      color: var(--text-color-secondary);
       opacity: 0.75;
       font-size: 0.88rem;
       margin-left: 0.35rem;
@@ -194,11 +183,11 @@ export const ValidatorStatusWrapper = styled.div<{ status: string }>`
   padding: 0 0.5rem;
 
   h5 {
-    color: ${(props) => (props.status === 'active' ? 'green' : textSecondary)};
+    color: ${(props) =>
+      props.status === 'active' ? 'green' : 'var(--text-color-secondary)'};
     opacity: ${(props) => (props.status === 'active' ? 0.8 : 0.5)};
     margin: 0;
     display: flex;
-    flex-flow: row nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -206,7 +195,7 @@ export const ValidatorStatusWrapper = styled.div<{ status: string }>`
 `;
 
 export const SelectWrapper = styled.button`
-  background: ${modalBackground};
+  background: var(--background-input);
   margin: 0 0.75rem 0 0.25rem;
   overflow: hidden;
   display: flex;
@@ -228,6 +217,7 @@ export const SelectWrapper = styled.button`
     justify-content: center;
   }
   svg {
+    color: var(--text-color-primary);
     width: 1rem;
     height: 1rem;
   }
@@ -240,9 +230,9 @@ export const SelectWrapper = styled.button`
 `;
 
 export const Separator = styled.div`
+  border-bottom: 1px solid var(--border-primary-color);
   width: 100%;
   height: 1px;
-  border-bottom: 1px solid ${borderPrimary};
   opacity: 0.7;
 `;
 
@@ -276,5 +266,3 @@ export const TooltipTrigger = styled.div`
     cursor: pointer;
   }
 `;
-
-export default Wrapper;

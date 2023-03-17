@@ -1,32 +1,33 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { faBars, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useModal } from 'contexts/Modal';
-import { useBondedPools } from 'contexts/Pools/BondedPools';
-import { BondedPool } from 'contexts/Pools/types';
-import { Title } from 'library/Modal/Title';
-import Identicon from 'library/Identicon';
 import { useActivePools } from 'contexts/Pools/ActivePools';
+import { useBondedPools } from 'contexts/Pools/BondedPools';
 import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
+import type { BondedPool } from 'contexts/Pools/types';
+import { Identicon } from 'library/Identicon';
+import { Title } from 'library/Modal/Title';
 import { useStatusButtons } from 'pages/Pools/Home/Status/useStatusButtons';
+import { useTranslation } from 'react-i18next';
 import { PaddingWrapper } from '../Wrappers';
-import { StyledButton, ContentWrapper } from './Wrappers';
+import { ContentWrapper, StyledButton } from './Wrappers';
 
 export const AccountPoolRoles = () => {
+  const { t } = useTranslation('modals');
   const { config } = useModal();
   const { getAccountPools } = useBondedPools();
   const { membership } = usePoolMemberships();
   const { who } = config;
-
   const accountPools = getAccountPools(who);
   const totalAccountPools = Object.entries(accountPools).length;
   const { label } = useStatusButtons();
 
   return (
     <>
-      <Title title="All Pool Roles" icon={faBars} />
+      <Title title={t('allPoolRoles')} icon={faBars} />
       <PaddingWrapper>
         <ContentWrapper>
           {membership && (
@@ -38,8 +39,9 @@ export const AccountPoolRoles = () => {
             </>
           )}
           <h4>
-            Active Roles in <b>{totalAccountPools}</b> Pool
-            {totalAccountPools === 1 ? '' : 's'}
+            {t('activeRoles', {
+              count: totalAccountPools,
+            })}
           </h4>
           <div className="items">
             {Object.entries(accountPools).map(([key, item]: any, i: number) => (
@@ -53,10 +55,10 @@ export const AccountPoolRoles = () => {
 };
 
 const Button = ({ item, poolId }: { item: Array<string>; poolId: string }) => {
+  const { t } = useTranslation('modals');
   const { setStatus } = useModal();
   const { bondedPools } = useBondedPools();
   const { setSelectedPoolId } = useActivePools();
-
   const pool = bondedPools.find((b: BondedPool) => String(b.id) === poolId);
   const stash = pool?.addresses?.stash || '';
 
@@ -75,11 +77,15 @@ const Button = ({ item, poolId }: { item: Array<string>; poolId: string }) => {
       </div>
 
       <div className="details">
-        <h3>Pool {poolId}</h3>
+        <h3>
+          {t('pool')} {poolId}
+        </h3>
         <h4>
-          {item.includes('root') && <span>Root</span>}
-          {item.includes('nominator') && <span>Nominator</span>}
-          {item.includes('stateToggler') && <span>State Toggler</span>}
+          {item.includes('root') ? <span>{t('root')}</span> : null}
+          {item.includes('nominator') ? <span>{t('nominator')}</span> : null}
+          {item.includes('stateToggler') ? (
+            <span>{t('stateToggler')}</span>
+          ) : null}
         </h4>
       </div>
       <div>
@@ -88,5 +94,3 @@ const Button = ({ item, poolId }: { item: Array<string>; poolId: string }) => {
     </StyledButton>
   );
 };
-
-export default AccountPoolRoles;

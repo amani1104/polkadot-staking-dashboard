@@ -1,8 +1,8 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef, useEffect } from 'react';
 import { useTooltip } from 'contexts/Tooltip';
+import { useEffect, useRef } from 'react';
 import { Wrapper } from './Wrapper';
 
 export const Tooltip = () => {
@@ -55,5 +55,3 @@ export const Tooltip = () => {
     </>
   );
 };
-
-export default Tooltip;

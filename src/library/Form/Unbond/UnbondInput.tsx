@@ -1,44 +1,50 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect } from 'react';
+import { ButtonInvert } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
-import { isNumeric } from 'Utils';
-import { Button } from 'library/Button';
-import { InputWrapper, RowWrapper } from '../Wrappers';
-import { UnbondInputProps } from '../types';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit } from 'Utils';
+import type { UnbondInputProps } from '../types';
+import { InputWrapper } from '../Wrappers';
 
-export const UnbondInput = (props: UnbondInputProps) => {
+export const UnbondInput = ({
+  defaultValue,
+  disabled,
+  unbondToMin,
+  setters = [],
+  value = 0,
+  active,
+}: UnbondInputProps) => {
+  const { t } = useTranslation('library');
   const { network } = useApi();
   const { activeAccount } = useConnect();
 
-  const { disabled, freeToUnbondToMin } = props;
-  const setters = props.setters ?? [];
-  const _value = props.value ?? 0;
-  const defaultValue = props.defaultValue ?? 0;
+  // get the actively bonded amount.
+  const activeUnit = planckToUnit(active, network.units);
 
-  // the current local bond value
-  const [value, setValue] = useState(_value);
+  // the current local bond value.
+  const [localBond, setLocalBond] = useState(value);
 
-  // reset value to default when changing account
+  // reset value to default when changing account.
   useEffect(() => {
-    setValue(defaultValue ?? 0);
+    setLocalBond(defaultValue ?? 0);
   }, [activeAccount]);
 
-  // handle change for unbonding
-  const handleChangeUnbond = (e: React.ChangeEvent) => {
-    if (!e) return;
-    const element = e.currentTarget as HTMLInputElement;
-    const val = element.value;
-
-    if (!(!isNumeric(val) && val !== '')) {
-      setValue(val);
-      updateParentState(val);
+  // handle change for unbonding.
+  const handleChangeUnbond = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (new BigNumber(val).isNaN() && val !== '') {
+      return;
     }
+    setLocalBond(val);
+    updateParentState(val);
   };
 
-  // apply bond to parent setters
+  // apply bond to parent setters.
   const updateParentState = (val: any) => {
     for (const s of setters) {
       s.set({
@@ -48,37 +54,47 @@ export const UnbondInput = (props: UnbondInputProps) => {
     }
   };
 
+  // unbond to min as unit.
+  const unbondToMinUnit = planckToUnit(unbondToMin, network.units);
+
+  // available funds as jsx.
+  const maxBondedJsx = (
+    <p>
+      {activeUnit.toFormat()} {network.unit} {t('bonded')}
+    </p>
+  );
+
   return (
-    <RowWrapper>
-      <div>
-        <InputWrapper>
-          <section style={{ opacity: disabled ? 0.5 : 1 }}>
-            <h3>Unbond {network.unit}:</h3>
-            <input
-              type="text"
-              placeholder={`0 ${network.unit}`}
-              value={value}
-              onChange={(e) => {
-                handleChangeUnbond(e);
-              }}
-              disabled={disabled}
-            />
-          </section>
-        </InputWrapper>
-      </div>
-      <div>
-        <div>
-          <Button
-            inline
-            small
-            title="Max"
+    <InputWrapper>
+      <div className="inner">
+        <section style={{ opacity: disabled ? 0.5 : 1 }}>
+          <div className="input">
+            <div>
+              <input
+                type="text"
+                placeholder={`0 ${network.unit}`}
+                value={localBond}
+                onChange={(e) => {
+                  handleChangeUnbond(e);
+                }}
+                disabled={disabled}
+              />
+            </div>
+            <div>{maxBondedJsx}</div>
+          </div>
+        </section>
+        <section>
+          <ButtonInvert
+            text={t('max')}
+            disabled={disabled}
             onClick={() => {
-              setValue(freeToUnbondToMin);
-              updateParentState(freeToUnbondToMin);
+              setLocalBond(unbondToMinUnit);
+              updateParentState(unbondToMinUnit);
             }}
           />
-        </div>
+        </section>
       </div>
-    </RowWrapper>
+      <div className="availableOuter">{maxBondedJsx}</div>
+    </InputWrapper>
   );
 };

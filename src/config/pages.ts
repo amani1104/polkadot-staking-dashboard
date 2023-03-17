@@ -1,95 +1,93 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { faHashtag } from '@fortawesome/free-solid-svg-icons';
-import Overview from 'pages/Overview';
-import Nominate from 'pages/Nominate';
-import Pools from 'pages/Pools';
-import Browse from 'pages/Validators';
-import Favourites from 'pages/Favourites';
-import Payouts from 'pages/Payouts';
-import Community from 'pages/Community';
-import { URI_PREFIX } from 'consts';
-import { PageCategories, PagesConfig } from 'types';
-import * as analyticsJson from 'img/json/analytics-solid.json';
-import * as viewAgendaJson from 'img/json/view-agenda-solid.json';
-import * as view1SolidJson from 'img/json/view-1-solid.json';
-import * as viewGroupJson from 'img/json/groups-solid-edited.json';
-import * as viewTrendingUpJson from 'img/json/trending-up-solid.json';
-import * as favoriteHeartJson from 'img/json/favorite-heart-solid.json';
+import { UriPrefix } from 'consts';
+import analyticsJson from 'img/json/analytics-solid.json';
+import favoriteHeartJson from 'img/json/favorite-heart-solid.json';
+import viewGroupJson from 'img/json/groups-solid.json';
+import viewTrendingUpJson from 'img/json/trending-up-solid.json';
+import view1SolidJson from 'img/json/view-1-solid.json';
+import viewAgendaJson from 'img/json/view-agenda-solid.json';
+import { Community } from 'pages/Community';
+import { Favorites } from 'pages/Favorites';
+import { Nominate } from 'pages/Nominate';
+import { Overview } from 'pages/Overview';
+import { Payouts } from 'pages/Payouts';
+import { Pools } from 'pages/Pools';
+import { Validators } from 'pages/Validators';
+import type { PageCategories, PagesConfig } from 'types';
 
 export const PAGE_CATEGORIES: PageCategories = [
   {
-    _id: 1,
-    title: 'default',
+    id: 1,
+    key: 'default',
   },
   {
-    _id: 2,
-    title: 'Stake',
+    id: 2,
+    key: 'stake',
   },
   {
-    _id: 3,
-    title: 'Validators',
+    id: 3,
+    key: 'validators',
   },
 ];
 
 export const PAGES_CONFIG: PagesConfig = [
   {
     category: 1,
-    title: 'Overview',
-    uri: `${URI_PREFIX}/`,
+    key: 'overview',
+    uri: `${UriPrefix}/`,
     hash: '/overview',
     Entry: Overview,
     animate: view1SolidJson,
   },
   {
     category: 2,
-    title: 'Solo',
-    uri: `${URI_PREFIX}/solo`,
-    hash: '/solo',
+    key: 'nominate',
+    uri: `${UriPrefix}/nominate`,
+    hash: '/nominate',
     Entry: Nominate,
     animate: viewTrendingUpJson,
   },
   {
     category: 2,
-    title: 'Pools',
-    uri: `${URI_PREFIX}/pools`,
+    key: 'pools',
+    uri: `${UriPrefix}/pools`,
     hash: '/pools',
     Entry: Pools,
     animate: viewGroupJson,
   },
   {
     category: 2,
-    title: 'Payouts',
-    uri: `${URI_PREFIX}/payouts`,
+    key: 'payouts',
+    uri: `${UriPrefix}/payouts`,
     hash: '/payouts',
     Entry: Payouts,
     animate: analyticsJson,
   },
   {
     category: 3,
-    title: 'Validators',
-    uri: `${URI_PREFIX}/validators`,
+    key: 'validators',
+    uri: `${UriPrefix}/validators`,
     hash: '/validators',
-    Entry: Browse,
+    Entry: Validators,
     animate: viewAgendaJson,
   },
   {
     category: 3,
-    title: 'Community',
-    uri: `${URI_PREFIX}/community`,
+    key: 'community',
+    uri: `${UriPrefix}/community`,
     hash: '/community',
     Entry: Community,
     icon: faHashtag,
   },
   {
     category: 3,
-    title: 'Favourites',
-    uri: `${URI_PREFIX}/favourites`,
-    hash: '/favourites',
-    Entry: Favourites,
+    key: 'favorites',
+    uri: `${UriPrefix}/favorites`,
+    hash: '/favorites',
+    Entry: Favorites,
     animate: favoriteHeartJson,
   },
 ];
-
-export default PAGES_CONFIG;

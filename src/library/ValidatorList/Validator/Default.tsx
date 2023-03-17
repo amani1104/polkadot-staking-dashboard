@@ -1,45 +1,44 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRef } from 'react';
-import { faBars, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faCopy } from '@fortawesome/free-regular-svg-icons';
+import { faBars, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMenu } from 'contexts/Menu';
-import { useNotifications } from 'contexts/Notifications';
 import { useModal } from 'contexts/Modal';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { NotificationText } from 'contexts/Notifications/types';
+import { useNotifications } from 'contexts/Notifications';
+import type { NotificationText } from 'contexts/Notifications/types';
+import { CopyAddress } from 'library/ListItem/Labels/CopyAddress';
+import { ParaValidator } from 'library/ListItem/Labels/ParaValidator';
 import {
-  Wrapper,
   Labels,
   MenuPosition,
   Separator,
+  Wrapper,
 } from 'library/ListItem/Wrappers';
-import CopyAddress from 'library/ListItem/Labels/CopyAddress';
-import { ParaValidator } from 'library/ListItem/Labels/ParaValidator';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useValidators } from '../../../contexts/Validators';
-import { getIdentityDisplay } from './Utils';
-import { FavouriteValidator } from '../../ListItem/Labels/FavouriteValidator';
-import { Identity } from '../../ListItem/Labels/Identity';
-import { Oversubscribed } from '../../ListItem/Labels/Oversubscribed';
+import { useList } from '../../List/context';
 import { Blocked } from '../../ListItem/Labels/Blocked';
 import { Commission } from '../../ListItem/Labels/Commission';
-import { Select } from '../../ListItem/Labels/Select';
 import { EraStatus } from '../../ListItem/Labels/EraStatus';
-import { useList } from '../../List/context';
-import { DefaultProps } from './types';
+import { FavoriteValidator } from '../../ListItem/Labels/FavoriteValidator';
+import { Identity } from '../../ListItem/Labels/Identity';
+import { Oversubscribed } from '../../ListItem/Labels/Oversubscribed';
+import { Select } from '../../ListItem/Labels/Select';
+import type { DefaultProps } from './types';
+import { getIdentityDisplay } from './Utils';
 
-export const Default = (props: DefaultProps) => {
-  const {
-    validator,
-    toggleFavourites,
-    batchIndex,
-    batchKey,
-    showMenu,
-    inModal,
-  } = props;
-
+export const Default = ({
+  validator,
+  toggleFavorites,
+  batchIndex,
+  batchKey,
+  showMenu,
+  inModal,
+}: DefaultProps) => {
+  const { t } = useTranslation('library');
   const { openModalWith } = useModal();
   const { addNotification } = useNotifications();
   const { setMenuPosition, setMenuItems, open }: any = useMenu();
@@ -62,7 +61,7 @@ export const Default = (props: DefaultProps) => {
     address == null
       ? null
       : {
-          title: 'Address Copied to Clipboard',
+          title: t('addressCopiedToClipboard'),
           subtitle: address,
         };
 
@@ -70,9 +69,9 @@ export const Default = (props: DefaultProps) => {
   const posRef = useRef(null);
   const menuItems = [
     {
-      icon: <FontAwesomeIcon icon={faChartLine as IconProp} />,
+      icon: <FontAwesomeIcon icon={faChartLine} />,
       wrap: null,
-      title: `View Metrics`,
+      title: `${t('viewMetrics')}`,
       cb: () => {
         openModalWith(
           'ValidatorMetrics',
@@ -85,9 +84,9 @@ export const Default = (props: DefaultProps) => {
       },
     },
     {
-      icon: <FontAwesomeIcon icon={faCopy as IconProp} />,
+      icon: <FontAwesomeIcon icon={faCopy} />,
       wrap: null,
-      title: `Copy Address`,
+      title: `${t('copyAddress')}`,
       cb: () => {
         navigator.clipboard.writeText(address);
         if (notificationCopyAddress) {
@@ -111,7 +110,6 @@ export const Default = (props: DefaultProps) => {
         <div className="row">
           {selectActive && <Select item={validator} />}
           <Identity
-            meta={meta}
             address={address}
             batchIndex={batchIndex}
             batchKey={batchKey}
@@ -123,7 +121,7 @@ export const Default = (props: DefaultProps) => {
               <Commission commission={commission} />
               <ParaValidator address={address} />
 
-              {toggleFavourites && <FavouriteValidator address={address} />}
+              {toggleFavorites && <FavoriteValidator address={address} />}
               {showMenu && (
                 <button
                   type="button"
@@ -142,7 +140,7 @@ export const Default = (props: DefaultProps) => {
           {inModal && (
             <>
               <Labels>
-                <CopyAddress validator={validator} />
+                <CopyAddress address={address} />
               </Labels>
             </>
           )}
@@ -151,5 +149,3 @@ export const Default = (props: DefaultProps) => {
     </Wrapper>
   );
 };
-
-export default Default;

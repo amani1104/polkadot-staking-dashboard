@@ -1,4 +1,4 @@
-import { FunctionComponent, SVGProps } from 'react';
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 
 export interface ItemProps {
   item: Item;
@@ -11,6 +11,6 @@ export interface Item {
   email: string;
   twitter: string;
   website: string;
-  Thumbnail: FunctionComponent<SVGProps<SVGSVGElement>>;
+  thumbnail: string;
   validators: { [key: string]: string };
 }

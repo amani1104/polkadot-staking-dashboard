@@ -1,28 +1,32 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { faLockOpen } from '@fortawesome/free-solid-svg-icons';
-import { useConnect } from 'contexts/Connect';
-import { planckBnToUnit, humanNumber } from 'Utils';
-import BondedGraph from 'library/Graphs/Bonded';
+import { ButtonHelp, ButtonPrimary } from '@polkadotcloud/dashboard-ui';
 import { useApi } from 'contexts/Api';
-import { Button, ButtonRow } from 'library/Button';
-import { OpenHelpIcon } from 'library/OpenHelpIcon';
+import { useConnect } from 'contexts/Connect';
+import { useHelp } from 'contexts/Help';
 import { useModal } from 'contexts/Modal';
-import { useUi } from 'contexts/UI';
 import { useActivePools } from 'contexts/Pools/ActivePools';
-import { CardHeaderWrapper } from 'library/Graphs/Wrappers';
-import { PoolState } from 'contexts/Pools/types';
 import { useTransferOptions } from 'contexts/TransferOptions';
+import { useUi } from 'contexts/UI';
+import { BondedChart } from 'library/BarChart/BondedChart';
+import { CardHeaderWrapper } from 'library/Graphs/Wrappers';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit } from 'Utils';
+import { ButtonRowWrapper } from 'Wrappers';
 
 export const ManageBond = () => {
+  const { t } = useTranslation('pages');
+
   const { network } = useApi();
   const { units } = network;
   const { openModalWith } = useModal();
   const { activeAccount } = useConnect();
-  const { isSyncing } = useUi();
+  const { isPoolSyncing } = useUi();
   const { isBonding, isMember, selectedActivePool } = useActivePools();
   const { getTransferOptions } = useTransferOptions();
+  const { openHelp } = useHelp();
 
   const allTransferOptions = getTransferOptions(activeAccount);
   const { freeBalance } = allTransferOptions;
@@ -35,72 +39,52 @@ export const ManageBond = () => {
     <>
       <CardHeaderWrapper>
         <h4>
-          Bonded Funds
-          <OpenHelpIcon helpKey="Bonded in Pool" />
+          {t('pools.bondedFunds')}
+          <ButtonHelp marginLeft onClick={() => openHelp('Bonded in Pool')} />
         </h4>
-        <h2>
-          {humanNumber(planckBnToUnit(active, units))}&nbsp;{network.unit}
-        </h2>
-        <ButtonRow>
-          <Button
-            small
-            primary
-            inline
-            title="+"
+        <h2>{`${planckToUnit(active, units).toFormat()} ${network.unit}`}</h2>
+        <ButtonRowWrapper>
+          <ButtonPrimary
             disabled={
-              isSyncing ||
+              isPoolSyncing ||
               !isBonding() ||
               !isMember() ||
-              state === PoolState.Destroy
+              state === 'Destroying'
             }
-            onClick={() =>
-              openModalWith(
-                'UpdateBond',
-                { fn: 'add', bondType: 'pool' },
-                'small'
-              )
-            }
+            marginRight
+            onClick={() => openModalWith('Bond', { bondFor: 'pool' }, 'small')}
+            text="+"
           />
-          <Button
-            small
-            primary
-            title="-"
+          <ButtonPrimary
             disabled={
-              isSyncing ||
+              isPoolSyncing ||
               !isBonding() ||
               !isMember() ||
-              state === PoolState.Destroy
+              state === 'Destroying'
             }
+            marginRight
             onClick={() =>
-              openModalWith(
-                'UpdateBond',
-                { fn: 'remove', bondType: 'pool' },
-                'small'
-              )
+              openModalWith('Unbond', { bondFor: 'pool' }, 'small')
             }
+            text="-"
           />
-          <Button
-            small
-            inline
-            primary
-            icon={faLockOpen}
-            title={String(totalUnlockChuncks ?? 0)}
-            disabled={isSyncing || !isMember() || state === PoolState.Destroy}
+          <ButtonPrimary
+            disabled={isPoolSyncing || !isMember() || state === 'Destroying'}
+            iconLeft={faLockOpen}
             onClick={() =>
-              openModalWith('UnlockChunks', { bondType: 'pool' }, 'small')
+              openModalWith('UnlockChunks', { bondFor: 'pool' }, 'small')
             }
+            text={String(totalUnlockChuncks ?? 0)}
           />
-        </ButtonRow>
+        </ButtonRowWrapper>
       </CardHeaderWrapper>
-      <BondedGraph
-        active={planckBnToUnit(active, units)}
-        unlocking={planckBnToUnit(totalUnlocking, units)}
-        unlocked={planckBnToUnit(totalUnlocked, units)}
-        free={planckBnToUnit(freeBalance, units)}
-        inactive={!isMember()}
+      <BondedChart
+        active={planckToUnit(active, units)}
+        unlocking={planckToUnit(totalUnlocking, units)}
+        unlocked={planckToUnit(totalUnlocked, units)}
+        free={planckToUnit(freeBalance, units)}
+        inactive={active.isZero()}
       />
     </>
   );
 };
-
-export default ManageBond;

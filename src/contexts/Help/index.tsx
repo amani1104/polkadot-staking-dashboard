@@ -1,18 +1,14 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useApi } from 'contexts/Api';
-import React, { useState, useEffect } from 'react';
-import { replaceAll } from 'Utils';
-import { MaybeString } from 'types';
-import {
-  HelpConfig,
+import React, { useEffect, useState } from 'react';
+import type { MaybeString } from 'types';
+import * as defaults from './defaults';
+import type {
   HelpContextInterface,
   HelpContextProps,
   HelpContextState,
-  HelpDefinition,
 } from './types';
-import * as defaults from './defaults';
 
 export const HelpContext = React.createContext<HelpContextInterface>(
   defaults.defaultHelpContext
@@ -20,15 +16,11 @@ export const HelpContext = React.createContext<HelpContextInterface>(
 
 export const useHelp = () => React.useContext(HelpContext);
 
-export const HelpProvider = (props: HelpContextProps) => {
-  const { network, consts } = useApi();
-  const { maxNominations, maxNominatorRewardedPerValidator } = consts;
-
+export const HelpProvider = ({ children }: HelpContextProps) => {
   // help module state
   const [state, setState] = useState<HelpContextState>({
     status: 0,
     definition: null,
-    config: {},
   });
 
   // when fade out completes, reset active definiton
@@ -42,27 +34,24 @@ export const HelpProvider = (props: HelpContextProps) => {
   }, [state.status]);
 
   const setDefinition = (definition: MaybeString) => {
-    const _state = {
+    setState({
       ...state,
       definition,
-    };
-    setState(_state);
+    });
   };
 
   const setStatus = (newStatus: number) => {
-    const _state = {
+    setState({
       ...state,
       status: newStatus,
-    };
-    setState(_state);
+    });
   };
 
-  const openHelpWith = (definition: MaybeString, _config: HelpConfig = {}) => {
+  const openHelp = (definition: MaybeString) => {
     setState({
       ...state,
       definition,
       status: 1,
-      config: _config,
     });
   };
 
@@ -73,45 +62,18 @@ export const HelpProvider = (props: HelpContextProps) => {
     });
   };
 
-  const fillDefinitionVariables = (d: HelpDefinition) => {
-    let { title, description } = d;
-
-    const varsToValues = [
-      ['{NETWORK_UNIT}', network.unit],
-      ['{NETWORK_NAME}', network.name],
-      [
-        '{MAX_NOMINATOR_REWARDED_PER_VALIDATOR}',
-        String(maxNominatorRewardedPerValidator),
-      ],
-      ['{MAX_NOMINATIONS}', String(maxNominations)],
-    ];
-
-    for (const varToVal of varsToValues) {
-      title = replaceAll(title, varToVal[0], varToVal[1]);
-      description = description.map((_d: string) =>
-        replaceAll(_d, varToVal[0], varToVal[1])
-      );
-    }
-
-    return {
-      title,
-      description,
-    };
-  };
-
   return (
     <HelpContext.Provider
       value={{
-        openHelpWith,
+        openHelp,
         closeHelp,
         setStatus,
         setDefinition,
-        fillDefinitionVariables,
         status: state.status,
         definition: state.definition,
       }}
     >
-      {props.children}
+      {children}
     </HelpContext.Provider>
   );
 };

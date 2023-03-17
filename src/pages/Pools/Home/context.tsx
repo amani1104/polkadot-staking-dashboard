@@ -1,11 +1,13 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import React, { useState } from 'react';
-import { PoolsTabsContextInterface } from '../types';
+import { extractUrlValue } from 'Utils';
+import type { PoolsTabsContextInterface } from '../types';
 
 export const PoolsTabsContext: React.Context<PoolsTabsContextInterface> =
   React.createContext({
+    // eslint-disable-next-line
     setActiveTab: (t: number) => {},
     activeTab: 0,
   });
@@ -17,9 +19,14 @@ export const PoolsTabsProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [activeTab, _setActiveTab] = useState<number>(0);
+  const tabFromUrl = extractUrlValue('t');
+  const initialActiveTab = [0, 1, 2, 3].includes(Number(tabFromUrl))
+    ? Number(tabFromUrl)
+    : 0;
 
-  const setActiveTab = (t: any) => {
+  const [activeTab, _setActiveTab] = useState<number>(initialActiveTab);
+
+  const setActiveTab = (t: number) => {
     _setActiveTab(t);
   };
 

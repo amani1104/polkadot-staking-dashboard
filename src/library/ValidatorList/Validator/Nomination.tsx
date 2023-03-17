@@ -1,36 +1,33 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { useValidators } from 'contexts/Validators';
-import { Wrapper, Labels, Separator } from 'library/ListItem/Wrappers';
 import { ParaValidator } from 'library/ListItem/Labels/ParaValidator';
+import { Labels, Separator, Wrapper } from 'library/ListItem/Wrappers';
 import { useList } from '../../List/context';
-import { getIdentityDisplay } from './Utils';
-import { FavouriteValidator } from '../../ListItem/Labels/FavouriteValidator';
-import { Metrics } from '../../ListItem/Labels/Metrics';
-import { Identity } from '../../ListItem/Labels/Identity';
-import { CopyAddress } from '../../ListItem/Labels/CopyAddress';
-import { Oversubscribed } from '../../ListItem/Labels/Oversubscribed';
 import { Blocked } from '../../ListItem/Labels/Blocked';
-import { Select } from '../../ListItem/Labels/Select';
-import { NominationStatus } from '../../ListItem/Labels/NominationStatus';
-import { NominationProps } from './types';
 import { Commission } from '../../ListItem/Labels/Commission';
+import { CopyAddress } from '../../ListItem/Labels/CopyAddress';
+import { FavoriteValidator } from '../../ListItem/Labels/FavoriteValidator';
+import { Identity } from '../../ListItem/Labels/Identity';
+import { Metrics } from '../../ListItem/Labels/Metrics';
+import { NominationStatus } from '../../ListItem/Labels/NominationStatus';
+import { Oversubscribed } from '../../ListItem/Labels/Oversubscribed';
+import { Select } from '../../ListItem/Labels/Select';
+import type { NominationProps } from './types';
+import { getIdentityDisplay } from './Utils';
 
-export const Nomination = (props: NominationProps) => {
+export const Nomination = ({
+  validator,
+  nominator,
+  toggleFavorites,
+  batchIndex,
+  batchKey,
+  bondFor,
+  inModal,
+}: NominationProps) => {
   const { meta } = useValidators();
   const { selectActive } = useList();
-
-  const {
-    validator,
-    nominator,
-    toggleFavourites,
-    batchIndex,
-    batchKey,
-    bondType,
-    inModal,
-  } = props;
-
   const identities = meta[batchKey]?.identities ?? [];
   const supers = meta[batchKey]?.supers ?? [];
 
@@ -43,15 +40,14 @@ export const Nomination = (props: NominationProps) => {
         <div className="row">
           {selectActive && <Select item={validator} />}
           <Identity
-            meta={meta}
             address={address}
             batchIndex={batchIndex}
             batchKey={batchKey}
           />
           <div>
             <Labels>
-              <CopyAddress validator={validator} />
-              {toggleFavourites && <FavouriteValidator address={address} />}
+              <CopyAddress address={address} />
+              {toggleFavorites && <FavoriteValidator address={address} />}
             </Labels>
           </div>
         </div>
@@ -59,7 +55,7 @@ export const Nomination = (props: NominationProps) => {
         <div className="row status">
           <NominationStatus
             address={address}
-            bondType={bondType}
+            bondFor={bondFor}
             nominator={nominator}
           />
           <Labels>
@@ -84,5 +80,3 @@ export const Nomination = (props: NominationProps) => {
     </Wrapper>
   );
 };
-
-export default Nomination;

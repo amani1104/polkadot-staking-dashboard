@@ -1,36 +1,45 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faGripVertical } from '@fortawesome/free-solid-svg-icons';
-import { List, Header, Wrapper as ListWrapper } from 'library/List';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ListItemsPerBatch, ListItemsPerPage } from 'consts';
 import { useApi } from 'contexts/Api';
 import { useNetworkMetrics } from 'contexts/Network';
-import { LIST_ITEMS_PER_PAGE, LIST_ITEMS_PER_BATCH } from 'consts';
-import { networkColors } from 'theme/default';
+import { usePoolMembers } from 'contexts/Pools/PoolMembers';
 import { useTheme } from 'contexts/Themes';
-import { AnyApi, Sync } from 'types';
+import { motion } from 'framer-motion';
+import { Header, List, Wrapper as ListWrapper } from 'library/List';
+import { ListProvider, useList } from 'library/List/context';
 import { MotionContainer } from 'library/List/MotionContainer';
 import { Pagination } from 'library/List/Pagination';
-import { useList, ListProvider } from 'library/List/context';
 import { Selectable } from 'library/List/Selectable';
-import { usePoolMembers } from 'contexts/Pools/PoolMembers';
+import { useEffect, useRef, useState } from 'react';
+import type { AnyApi, Sync } from 'types';
+import { isNotZero } from 'Utils';
 import { Member } from './Member';
 
-export const MembersListInner = (props: any) => {
-  const { allowMoreCols, pagination, selectable, batchKey } = props;
-
-  const actions = props.actions ?? [];
-
+export const MembersListInner = ({
+  allowMoreCols,
+  pagination,
+  selectable,
+  batchKey,
+  onSelected,
+  title,
+  members: initialMembers,
+  disableThrottle = false,
+  actions = [],
+}: any) => {
   const { mode } = useTheme();
   const provider = useList();
-  const { isReady, network } = useApi();
-  const { metrics } = useNetworkMetrics();
+  const {
+    isReady,
+    network: { colors },
+  } = useApi();
+  const { activeEra } = useNetworkMetrics();
   const { fetchPoolMembersMetaBatch } = usePoolMembers();
 
-  // get list provider props
+  // get list provider properties.
   const { selected, listFormat, setListFormat } = provider;
 
   // get actions
@@ -39,8 +48,6 @@ export const MembersListInner = (props: any) => {
     (action: any) => action.onSelected
   );
 
-  const disableThrottle = props.disableThrottle ?? false;
-
   // current page
   const [page, setPage] = useState<number>(1);
 
@@ -48,13 +55,13 @@ export const MembersListInner = (props: any) => {
   const [renderIteration, _setRenderIteration] = useState<number>(1);
 
   // default list of validators
-  const [membersDefault, setMembersDefault] = useState(props.members);
+  const [membersDefault, setMembersDefault] = useState(initialMembers);
 
   // manipulated list (ordering, filtering) of payouts
-  const [members, setMembers] = useState(props.members);
+  const [members, setMembers] = useState(initialMembers);
 
   // is this the initial fetch
-  const [fetched, setFetched] = useState<Sync>(Sync.Unsynced);
+  const [fetched, setFetched] = useState<Sync>('unsynced');
 
   // render throttle iteration
   const renderIterationRef = useRef(renderIteration);
@@ -64,26 +71,26 @@ export const MembersListInner = (props: any) => {
   };
 
   // pagination
-  const totalPages = Math.ceil(members.length / LIST_ITEMS_PER_PAGE);
-  const pageEnd = page * LIST_ITEMS_PER_PAGE - 1;
-  const pageStart = pageEnd - (LIST_ITEMS_PER_PAGE - 1);
+  const totalPages = Math.ceil(members.length / ListItemsPerPage);
+  const pageEnd = page * ListItemsPerPage - 1;
+  const pageStart = pageEnd - (ListItemsPerPage - 1);
 
   // render batch
-  const batchEnd = renderIteration * LIST_ITEMS_PER_BATCH - 1;
+  const batchEnd = renderIteration * ListItemsPerBatch - 1;
 
   // refetch list when list changes
   useEffect(() => {
-    if (props.members !== membersDefault) {
-      setFetched(Sync.Unsynced);
+    if (initialMembers !== membersDefault) {
+      setFetched('unsynced');
     }
-  }, [props.members]);
+  }, [initialMembers]);
 
   // configure list when network is ready to fetch
   useEffect(() => {
-    if (isReady && metrics.activeEra.index !== 0 && fetched === Sync.Unsynced) {
+    if (isReady && isNotZero(activeEra.index) && fetched === 'unsynced') {
       setupMembersList();
     }
-  }, [isReady, fetched, metrics.activeEra.index]);
+  }, [isReady, fetched, activeEra.index]);
 
   // render throttle
   useEffect(() => {
@@ -96,17 +103,17 @@ export const MembersListInner = (props: any) => {
 
   // trigger onSelected when selection changes
   useEffect(() => {
-    if (props.onSelected) {
-      props.onSelected(provider);
+    if (onSelected) {
+      onSelected(provider);
     }
   }, [selected]);
 
   // handle validator list bootstrapping
   const setupMembersList = () => {
-    setMembersDefault(props.members);
-    setMembers(props.members);
-    fetchPoolMembersMetaBatch(batchKey, props.members, false);
-    setFetched(Sync.Synced);
+    setMembersDefault(initialMembers);
+    setMembers(initialMembers);
+    fetchPoolMembersMetaBatch(batchKey, initialMembers, false);
+    setFetched('synced');
   };
 
   // get list items to render
@@ -114,7 +121,7 @@ export const MembersListInner = (props: any) => {
 
   // get throttled subset or entire list
   if (!disableThrottle) {
-    listMembers = members.slice(pageStart).slice(0, LIST_ITEMS_PER_PAGE);
+    listMembers = members.slice(pageStart).slice(0, ListItemsPerPage);
   } else {
     listMembers = members;
   }
@@ -127,27 +134,19 @@ export const MembersListInner = (props: any) => {
     <ListWrapper>
       <Header>
         <div>
-          <h4>{props.title}</h4>
+          <h4>{title}</h4>
         </div>
         <div>
           <button type="button" onClick={() => setListFormat('row')}>
             <FontAwesomeIcon
               icon={faBars}
-              color={
-                listFormat === 'row'
-                  ? networkColors[`${network.name}-${mode}`]
-                  : 'inherit'
-              }
+              color={listFormat === 'row' ? colors.primary[mode] : 'inherit'}
             />
           </button>
           <button type="button" onClick={() => setListFormat('col')}>
             <FontAwesomeIcon
               icon={faGripVertical}
-              color={
-                listFormat === 'col'
-                  ? networkColors[`${network.name}-${mode}`]
-                  : 'inherit'
-              }
+              color={listFormat === 'col' ? colors.primary[mode] : 'inherit'}
             />
           </button>
         </div>

@@ -1,21 +1,22 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
 } from 'chart.js';
-import { defaultThemes, networkColors } from 'theme/default';
-import { useTheme } from 'contexts/Themes';
 import { useApi } from 'contexts/Api';
-import { EraPointsProps } from './types';
+import { useTheme } from 'contexts/Themes';
+import { Line } from 'react-chartjs-2';
+import { useTranslation } from 'react-i18next';
+import { graphColors } from 'styles/graphs';
+import type { EraPointsProps } from './types';
 
 ChartJS.register(
   CategoryScale,
@@ -27,23 +28,21 @@ ChartJS.register(
   Legend
 );
 
-export const EraPoints = (props: EraPointsProps) => {
+export const EraPoints = ({ items = [], height }: EraPointsProps) => {
+  const { t } = useTranslation('library');
   const { mode } = useTheme();
-  const { network } = useApi();
-  let { items } = props;
-  const { height } = props;
-
-  items = items === undefined ? [] : items;
+  const { colors } = useApi().network;
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: {
+        border: {
+          display: false,
+        },
         grid: {
-          drawBorder: false,
-          color: defaultThemes.transparent[mode],
-          borderColor: defaultThemes.transparent[mode],
+          color: 'rgba(0,0,0,0)',
         },
         ticks: {
           display: true,
@@ -59,14 +58,15 @@ export const EraPoints = (props: EraPointsProps) => {
         },
       },
       y: {
+        border: {
+          display: false,
+        },
+        grid: {
+          color: graphColors.grid[mode],
+        },
         ticks: {
           display: true,
           beginAtZero: false,
-        },
-        grid: {
-          drawBorder: false,
-          color: defaultThemes.graphs.grid[mode],
-          borderColor: defaultThemes.transparent[mode],
         },
       },
     },
@@ -76,22 +76,19 @@ export const EraPoints = (props: EraPointsProps) => {
       },
       title: {
         display: false,
-        text: 'Era Points',
+        text: t('eraPoints'),
       },
       tooltip: {
         displayColors: false,
-        backgroundColor: defaultThemes.graphs.tooltip[mode],
-        bodyColor: defaultThemes.text.invert[mode],
+        backgroundColor: graphColors.tooltip[mode],
+        titleColor: graphColors.label[mode],
+        bodyColor: graphColors.label[mode],
         bodyFont: {
           weight: '600',
         },
         callbacks: {
-          title: () => {
-            return [];
-          },
-          label: (context: any) => {
-            return `${context.parsed.y}`;
-          },
+          title: () => [],
+          label: (context: any) => `${context.parsed.y}`,
         },
         intersect: false,
         interaction: {
@@ -102,18 +99,13 @@ export const EraPoints = (props: EraPointsProps) => {
   };
 
   const data = {
-    labels: items.map((item: any, index: number) => {
-      return item.era;
-    }),
+    labels: items.map((item: any) => item.era),
     datasets: [
       {
-        label: 'Points',
-        // data: empty_data,
-        data: items.map((item: any, index: number) => {
-          return item.reward_point;
-        }),
-        borderColor: networkColors[`${network.name}-${mode}`],
-        backgroundColor: networkColors[`${network.name}-${mode}`],
+        label: t('points'),
+        data: items.map((item: any) => item.reward_point),
+        borderColor: colors.primary[mode],
+        backgroundColor: colors.primary[mode],
         pointStyle: undefined,
         pointRadius: 0,
         borderWidth: 2,
@@ -124,12 +116,10 @@ export const EraPoints = (props: EraPointsProps) => {
   return (
     <div
       style={{
-        height: height === undefined ? 'auto' : height,
+        height: height || 'auto',
       }}
     >
       <Line options={options} data={data} />
     </div>
   );
 };
-
-export default EraPoints;

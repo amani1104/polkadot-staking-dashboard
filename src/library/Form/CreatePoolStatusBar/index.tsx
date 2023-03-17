@@ -1,44 +1,48 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFlag } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useApi } from 'contexts/Api';
-import { useUi } from 'contexts/UI';
-import { planckBnToUnit } from 'Utils';
 import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
+import { useUi } from 'contexts/UI';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit } from 'Utils';
+import type { NominateStatusBarProps } from '../types';
 import { Wrapper } from './Wrapper';
-import { NominateStatusBarProps } from '../types';
 
-export const CreatePoolStatusBar = (props: NominateStatusBarProps) => {
-  const { value } = props;
-
-  const { network } = useApi();
-  const { stats } = usePoolsConfig();
+export const CreatePoolStatusBar = ({ value }: NominateStatusBarProps) => {
+  const { t } = useTranslation('library');
   const { isSyncing } = useUi();
-  const { unit, units } = network;
-  const { minCreateBond } = stats;
+  const { unit, units } = useApi().network;
+  const { minCreateBond } = usePoolsConfig().stats;
 
-  const minCreateBondBase = planckBnToUnit(minCreateBond, units);
-  const gtMinCreateBond = value >= minCreateBondBase;
+  const minCreateBondUnit = planckToUnit(minCreateBond, units);
+  const sectionClassName =
+    value.isGreaterThanOrEqualTo(minCreateBondUnit) && !isSyncing
+      ? 'invert'
+      : '';
 
   return (
     <Wrapper>
       <div className="bars">
-        <section className={gtMinCreateBond && !isSyncing ? 'invert' : ''}>
+        <section className={sectionClassName}>
           <h4>&nbsp;</h4>
           <div className="bar">
             <h5>0 {unit}</h5>
           </div>
         </section>
-        <section className={gtMinCreateBond && !isSyncing ? 'invert' : ''}>
+        <section className={sectionClassName}>
           <h4>
-            <FontAwesomeIcon icon={faFlag as IconProp} transform="shrink-4" />
-            &nbsp;Create Pool
+            <FontAwesomeIcon icon={faFlag} transform="shrink-4" />
+            &nbsp;{t('createPool')}
           </h4>
           <div className="bar">
-            <h5>{isSyncing ? '...' : `${minCreateBondBase} ${unit}`}</h5>
+            <h5>
+              {isSyncing
+                ? '...'
+                : `${minCreateBondUnit.decimalPlaces(3).toFormat()} ${unit}`}
+            </h5>
           </div>
         </section>
       </div>

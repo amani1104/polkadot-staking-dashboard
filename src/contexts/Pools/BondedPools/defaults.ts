@@ -1,7 +1,7 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { BondedPoolsContextState } from '../types';
+import type { BondedPoolsContextState } from '../types';
 
 export const defaultBondedPoolsContext: BondedPoolsContextState = {
   // eslint-disable-next-line
@@ -25,7 +25,9 @@ export const defaultBondedPoolsContext: BondedPoolsContextState = {
   // eslint-disable-next-line
   getAccountPools: (w) => null,
   // eslint-disable-next-line
-   poolSearchFilter: (l, k, v) => {},
+  replacePoolRoles: (p, e) => {},
+  // eslint-disable-next-line
+  poolSearchFilter: (l, k, v) => {},
   bondedPools: [],
   meta: {},
 };

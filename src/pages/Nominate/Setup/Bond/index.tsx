@@ -1,28 +1,32 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
+import BigNumber from 'bignumber.js';
 import { useConnect } from 'contexts/Connect';
-import { useUi } from 'contexts/UI';
+import { useSetup } from 'contexts/Setup';
+import { useTxFees } from 'contexts/TxFees';
 import { BondFeedback } from 'library/Form/Bond/BondFeedback';
 import { NominateStatusBar } from 'library/Form/NominateStatusBar';
-import { SetupStepProps } from 'library/SetupSteps/types';
-import { SetupType } from 'contexts/UI/types';
-import { Header } from 'library/SetupSteps/Header';
 import { Footer } from 'library/SetupSteps/Footer';
+import { Header } from 'library/SetupSteps/Header';
 import { MotionContainer } from 'library/SetupSteps/MotionContainer';
+import type { SetupStepProps } from 'library/SetupSteps/types';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-export const Bond = (props: SetupStepProps) => {
-  const { section } = props;
+export const Bond = ({ section }: SetupStepProps) => {
+  const { t } = useTranslation('pages');
   const { activeAccount } = useConnect();
-  const { getSetupProgress, setActiveAccountSetup } = useUi();
-  const setup = getSetupProgress(SetupType.Stake, activeAccount);
+  const { txFees } = useTxFees();
+  const { getSetupProgress, setActiveAccountSetup } = useSetup();
+  const setup = getSetupProgress('nominator', activeAccount);
+  const { progress } = setup;
 
   // either free to bond or existing setup value
-  const initialBondValue = setup.bond === 0 ? 0 : setup.bond;
+  const initialBondValue = progress.bond === '0' ? '0' : progress.bond;
 
   // store local bond amount for form control
-  const [bond, setBond] = useState({
+  const [bond, setBond] = useState<{ bond: string }>({
     bond: initialBondValue,
   });
 
@@ -31,7 +35,7 @@ export const Bond = (props: SetupStepProps) => {
 
   // handler for updating bond
   const handleSetupUpdate = (value: any) => {
-    setActiveAccountSetup(SetupType.Stake, value);
+    setActiveAccountSetup('nominator', value);
   };
 
   // update bond on account change
@@ -45,8 +49,8 @@ export const Bond = (props: SetupStepProps) => {
   useEffect(() => {
     // only update if Bond is currently active
     if (setup.section === section) {
-      setActiveAccountSetup(SetupType.Stake, {
-        ...setup,
+      setActiveAccountSetup('nominator', {
+        ...progress,
         bond: initialBondValue,
       });
     }
@@ -56,33 +60,34 @@ export const Bond = (props: SetupStepProps) => {
     <>
       <Header
         thisSection={section}
-        complete={setup.bond !== 0}
-        title="Bond"
+        complete={progress.bond !== '0' && progress.bond !== ''}
+        title={`${t('nominate.bond')}`}
         helpKey="Bonding"
-        setupType={SetupType.Stake}
+        bondFor="nominator"
       />
       <MotionContainer thisSection={section} activeSection={setup.section}>
         <BondFeedback
-          bondType="stake"
+          syncing={txFees.isZero()}
+          bondFor="nominator"
           inSetup
           listenIsValid={setBondValid}
           defaultBond={initialBondValue}
           setters={[
             {
               set: handleSetupUpdate,
-              current: setup,
+              current: progress,
             },
             {
               set: setBond,
               current: bond,
             },
           ]}
+          txFees={txFees}
+          maxWidth
         />
-        <NominateStatusBar value={bond.bond} />
-        <Footer complete={bondValid} setupType={SetupType.Stake} />
+        <NominateStatusBar value={new BigNumber(bond.bond)} />
+        <Footer complete={bondValid} bondFor="nominator" />
       </MotionContainer>
     </>
   );
 };
-
-export default Bond;

@@ -1,48 +1,39 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBullhorn as faBack } from '@fortawesome/free-solid-svg-icons';
-import { motion } from 'framer-motion';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
-import { useUi } from 'contexts/UI';
-import {
-  humanNumber,
-  planckBnToUnit,
-  rmCommas,
-  toFixedIfNecessary,
-} from 'Utils';
-import { Announcement as AnnouncementLoader } from 'library/Loaders/Announcement';
 import { useActivePools } from 'contexts/Pools/ActivePools';
+import { motion } from 'framer-motion';
+import { Announcement as AnnouncementLoader } from 'library/Loader/Announcement';
+import { useTranslation } from 'react-i18next';
+import { greaterThanZero, planckToUnit, rmCommas } from 'Utils';
 import { Item } from './Wrappers';
 
 export const Announcements = () => {
-  const { isSyncing } = useUi();
+  const { t } = useTranslation('pages');
   const { network, consts } = useApi();
   const { selectedActivePool } = useActivePools();
-  const { units } = network;
+  const { units, unit } = network;
   const { rewardAccountBalance } = selectedActivePool || {};
   const { totalRewardsClaimed } = selectedActivePool?.rewardPool || {};
   const { existentialDeposit } = consts;
 
   // calculate the latest reward account balance
-  const rewardPoolBalance = BN.max(
-    new BN(0),
-    new BN(rewardAccountBalance).sub(existentialDeposit)
+  const rewardPoolBalance = BigNumber.max(
+    0,
+    new BigNumber(rewardAccountBalance).minus(existentialDeposit)
   );
-  const rewardBalance = toFixedIfNecessary(
-    planckBnToUnit(rewardPoolBalance, units),
-    3
-  );
+  const rewardBalance = planckToUnit(rewardPoolBalance, units);
 
   // calculate total rewards claimed
-  const rewardsClaimed = toFixedIfNecessary(
-    planckBnToUnit(
-      totalRewardsClaimed ? new BN(rmCommas(totalRewardsClaimed)) : new BN(0),
-      network.units
-    ),
-    3
+  const rewardsClaimed = planckToUnit(
+    totalRewardsClaimed
+      ? new BigNumber(rmCommas(totalRewardsClaimed))
+      : new BigNumber(0),
+    network.units
   );
 
   const container = {
@@ -68,20 +59,22 @@ export const Announcements = () => {
 
   announcements.push({
     class: 'neutral',
-    title: `${humanNumber(rewardsClaimed)} ${
-      network.unit
-    } in rewards have been claimed.`,
-    subtitle: `The total amount of ${network.unit} that has been claimed by pool members.`,
+    title: `${rewardsClaimed.decimalPlaces(3).toFormat()} ${unit} ${t(
+      'pools.beenClaimed'
+    )}`,
+    subtitle: `${t('pools.beenClaimedBy', { unit })}`,
   });
 
-  if (rewardBalance > 0) {
+  if (greaterThanZero(rewardBalance)) {
     announcements.push({
       class: 'neutral',
-      title: `${humanNumber(rewardBalance)} ${
-        network.unit
-      } outstanding reward balance.`,
-      subtitle: `The outstanding amount of ${network.unit} available to claim by pool members.`,
+      title: `${rewardBalance.decimalPlaces(3).toFormat()} ${unit} ${t(
+        'pools.outstandingReward'
+      )}`,
+      subtitle: `${t('pools.availableToClaim', { unit })}`,
     });
+  } else {
+    announcements.push(null);
   }
 
   return (
@@ -91,10 +84,10 @@ export const Announcements = () => {
       animate="show"
       style={{ width: '100%' }}
     >
-      {isSyncing ? (
-        <AnnouncementLoader />
-      ) : (
-        announcements.map((item, index) => (
+      {announcements.map((item, index) =>
+        item === null ? (
+          <AnnouncementLoader key={`announcement_${index}`} />
+        ) : (
           <Item key={`announcement_${index}`} variants={listItem}>
             <h4 className={item.class}>
               <FontAwesomeIcon
@@ -105,7 +98,7 @@ export const Announcements = () => {
             </h4>
             <p>{item.subtitle}</p>
           </Item>
-        ))
+        )
       )}
     </motion.div>
   );

@@ -1,24 +1,16 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import styled from 'styled-components';
-import { motion } from 'framer-motion';
 import {
-  SIDE_MENU_MAXIMISED_WIDTH,
-  SIDE_MENU_MINIMISED_WIDTH,
-  INTERFACE_MAXIMUM_WIDTH,
-  SIDE_MENU_STICKY_THRESHOLD,
-  SHOW_ACCOUNTS_BUTTON_WIDTH_THRESHOLD,
+  InterfaceMaximumWidth,
+  ShowAccountsButtonWidthThreshold,
+  SideMenuMaximisedWidth,
+  SideMenuMinimisedWidth,
+  SideMenuStickyThreshold,
 } from 'consts';
-import {
-  textPrimary,
-  backgroundGradient,
-  backgroundPrimary,
-  borderPrimary,
-  textSecondary,
-  buttonSecondaryBackground,
-} from 'theme';
-import {
+import { motion } from 'framer-motion';
+import styled from 'styled-components';
+import type {
   InterfaceLayoutProps,
   PageRowWrapperProps,
   PageTitleWrapperProps,
@@ -32,8 +24,7 @@ import {
  * classes used throughout the app and possibly the library.
  */
 export const EntryWrapper = styled.div`
-  background: ${backgroundGradient};
-  box-sizing: border-box;
+  background: var(--gradient-background);
   width: 100%;
   background-attachment: fixed;
   display: flex;
@@ -42,38 +33,46 @@ export const EntryWrapper = styled.div`
   flex-grow: 1;
 
   h1 {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
   }
   h2 {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
   }
   h3 {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
   }
   h4 {
-    color: ${textPrimary};
+    color: var(--text-color-secondary);
   }
   h5 {
-    color: ${textPrimary};
+    color: var(--text-color-secondary);
+  }
+  p {
+    color: var(--text-color-secondary);
   }
   a {
-    color: ${textSecondary};
+    color: var(--text-color-secondary);
   }
   input {
-    color: ${textPrimary};
+    color: var(--text-color-primary);
   }
 
   path.primary {
-    fill: ${textPrimary};
+    fill: var(--text-color-primary);
   }
 
   ellipse.primary {
-    fill: ${textPrimary};
+    fill: var(--text-color-primary);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
   }
 
   input {
     border: none;
-    border-bottom: 1px solid #ddd;
     padding: 0.7rem 0rem;
     font-size: 1.1rem;
     background: none;
@@ -84,26 +83,36 @@ export const EntryWrapper = styled.div`
     color: #aaa;
   }
 
-  input:focus,
-  textarea:focus,
-  select:focus {
-    outline: none;
+  .textbox,
+  .textbox:focus {
+    border-bottom: 1px solid #ddd;
+  }
+
+  .searchbox,
+  .searchbox:focus {
+    border: 1px solid #ddd;
   }
 
   .page-padding {
     padding-left: 1.25rem;
     padding-right: 1.25rem;
 
-    @media (min-width: ${SHOW_ACCOUNTS_BUTTON_WIDTH_THRESHOLD + 1}px) {
-      padding-left: 1.75rem;
-      padding-right: 1.75rem;
+    @media (min-width: ${ShowAccountsButtonWidthThreshold + 1}px) {
+      padding-left: 2.25rem;
+      padding-right: 2.25rem;
     }
-    @media (min-width: ${SIDE_MENU_STICKY_THRESHOLD + 1}px) {
-      padding: 0 3rem 0 1rem;
+    @media (min-width: ${SideMenuStickyThreshold + 1}px) {
+      padding: 0 5rem 0 2.5rem;
     }
     @media (min-width: 1500px) {
-      padding: 0 5rem 0 1rem;
+      padding: 0 5rem 0 2.5rem;
     }
+  }
+  .label {
+    font-size: 0.85rem;
+    display: flex;
+    flex-flow: row wrap;
+    align-items: flex-end;
   }
 `;
 
@@ -113,9 +122,7 @@ export const EntryWrapper = styled.div`
  * Used once in Router.
  */
 export const BodyInterfaceWrapper = styled.div`
-  box-sizing: border-box;
   display: flex;
-  flex-flow: row nowrap;
   position: relative;
   flex-grow: 1;
 `;
@@ -127,7 +134,6 @@ export const BodyInterfaceWrapper = styled.div`
  * Used once in Router.
  */
 export const SideInterfaceWrapper = styled.div<SideInterfaceWrapperProps>`
-  box-sizing: border-box;
   height: 100vh;
   display: flex;
   flex-flow: column nowrap;
@@ -138,18 +144,18 @@ export const SideInterfaceWrapper = styled.div<SideInterfaceWrapperProps>`
   overflow: hidden;
   min-width: ${(props) =>
     props.minimised
-      ? `${SIDE_MENU_MINIMISED_WIDTH}px`
-      : `${SIDE_MENU_MAXIMISED_WIDTH}px`};
+      ? `${SideMenuMinimisedWidth}px`
+      : `${SideMenuMaximisedWidth}px`};
   max-width: ${(props) =>
     props.minimised
-      ? `${SIDE_MENU_MINIMISED_WIDTH}px`
-      : `${SIDE_MENU_MAXIMISED_WIDTH}px`};
+      ? `${SideMenuMinimisedWidth}px`
+      : `${SideMenuMaximisedWidth}px`};
   transition: all 0.5s cubic-bezier(0.1, 1, 0.2, 1);
 
-  @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
+  @media (max-width: ${SideMenuStickyThreshold}px) {
     position: fixed;
     top: 0;
-    left: ${(props) => (props.open ? 0 : `-${SIDE_MENU_MAXIMISED_WIDTH}px`)};
+    left: ${(props) => (props.open ? 0 : `-${SideMenuMaximisedWidth}px`)};
   }
 `;
 
@@ -159,7 +165,6 @@ export const SideInterfaceWrapper = styled.div<SideInterfaceWrapperProps>`
  * Used once in Router.
  */
 export const MainInterfaceWrapper = styled.div`
-  box-sizing: border-box;
   flex: 1;
   display: flex;
   flex-flow: column nowrap;
@@ -173,8 +178,7 @@ export const MainInterfaceWrapper = styled.div`
  * affect the entire page.
  */
 export const PageWrapper = styled(motion.div)`
-  max-width: ${INTERFACE_MAXIMUM_WIDTH}px;
-  box-sizing: border-box;
+  max-width: ${InterfaceMaximumWidth}px;
   display: flex;
   flex-flow: column nowrap;
   padding-bottom: 4.5rem;
@@ -189,8 +193,7 @@ export const PageWrapper = styled(motion.div)`
  * is stuck.
  */
 export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
-  box-sizing: border-box;
-  background: ${backgroundPrimary};
+  background: var(--background-default);
   position: sticky;
   top: 0px;
   padding-top: ${(props) => (props.sticky ? '1.5rem' : '0.5rem')};
@@ -204,14 +207,13 @@ export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
   justify-content: flex-end;
   transition: padding 0.3s ease-out;
 
-  @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
+  @media (max-width: ${SideMenuStickyThreshold}px) {
     top: 4rem;
     padding-top: 0.75rem;
     padding-bottom: 0.5rem;
   }
 
   .title {
-    box-sizing: border-box;
     display: flex;
     flex-flow: row wrap;
     align-items: center;
@@ -226,14 +228,15 @@ export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
     }
 
     button {
-      color: ${textSecondary};
-      border: 1px solid ${borderPrimary};
+      color: var(--text-color-secondary);
+      border: 1px solid var(--border-primary-color);
       padding: 0.5rem 0.75rem;
       margin: 0;
       border-radius: 0.75rem;
+      font-size: 1.1rem;
 
       &:hover {
-        background: ${buttonSecondaryBackground};
+        background: var(--button-secondary-background);
       }
 
       .icon {
@@ -243,29 +246,33 @@ export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
   }
 
   h1 {
+    font-size: 1.75rem;
     font-family: 'Unbounded', 'sans-serif', sans-serif;
-    font-size: ${(props) => (props.sticky ? '1.4rem ' : '1.75rem')};
-    @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
-      font-size: 1.5rem;
+    position: relative;
+    transform: ${(props) => (props.sticky ? 'scale(0.75) ' : 'scale(1)')};
+    left: ${(props) => (props.sticky ? '-1.25rem ' : 0)};
+
+    @media (max-width: ${SideMenuStickyThreshold}px) {
+      left: -1rem;
+      transform: scale(0.75);
     }
-    transition: font 0.5s;
+    transition: all 0.25s;
     margin: 0;
   }
 
   .tabs {
-    box-sizing: border-box;
+    border-bottom: ${(props) => (props.sticky ? '0px' : '1px solid')};
+    border-bottom-color: var(--border-primary-color);
     overflow: hidden;
-    max-width: ${INTERFACE_MAXIMUM_WIDTH}px;
-    transition: margin 0.2s;
-    height: 3.5rem;
+    max-width: ${InterfaceMaximumWidth}px;
+    height: 3.6rem;
 
     margin-top: ${(props) => (props.sticky ? '0.5rem' : '0.9rem')};
-    @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
+    @media (max-width: ${SideMenuStickyThreshold}px) {
       margin-top: 0.5rem;
     }
 
     > .scroll {
-      box-sizing: border-box;
       width: 100%;
       height: 4.5rem;
       overflow-x: auto;
@@ -274,21 +281,18 @@ export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
 
     .inner {
       display: flex;
-      flex-flow: row nowrap;
-      border-bottom: ${(props) => (props.sticky ? '0px' : '1px solid')};
-      border-bottom-color: ${borderPrimary};
 
       > button {
-        padding: 0.75rem 1rem;
+        color: var(--text-color-secondary);
+        padding: 0.65rem 1rem;
         margin-bottom: 0.5rem;
         margin-right: 0.75rem;
         font-size: ${(props) => (props.sticky ? '1.05rem' : '1.15rem')};
-        color: ${textSecondary};
         transition: opacity 0.1s, font-size 0.1s;
         border-radius: 0.5rem;
 
         &.active {
-          background: ${buttonSecondaryBackground};
+          background: var(--button-secondary-background);
         }
         &:last-child {
           margin-right: 0;
@@ -308,15 +312,14 @@ export const PageTitleWrapper = styled.header<PageTitleWrapperProps>`
  * Purely cosmetic. Applied in Pagetitle.
  */
 export const MenuPaddingWrapper = styled.div`
-  background: ${backgroundPrimary};
-  box-sizing: border-box;
+  background: var(--background-default);
   position: fixed;
   top: 0px;
   width: 100%;
   height: 4rem;
   z-index: 4;
   display: none;
-  @media (max-width: ${SIDE_MENU_STICKY_THRESHOLD}px) {
+  @media (max-width: ${SideMenuStickyThreshold}px) {
     display: block;
   }
 `;
@@ -327,16 +330,12 @@ export const MenuPaddingWrapper = styled.div`
  * Commonly used with RowPrimaryWrapper and RowSecondaryWrapper.
  */
 export const PageRowWrapper = styled.div<PageRowWrapperProps>`
-  box-sizing: border-box;
   margin-top: ${(props) => (props.noVerticalSpacer === true ? '0' : '1rem')};
   margin-bottom: ${(props) => (props.noVerticalSpacer === true ? '0' : '1rem')};
   display: flex;
   flex-shrink: 0;
   flex-flow: row wrap;
   width: 100%;
-  * {
-    box-sizing: border-box;
-  }
   /* kill heading padding, already applied to wrapper */
   h1,
   h2,
@@ -352,7 +351,6 @@ export const PageRowWrapper = styled.div<PageRowWrapperProps>`
  */
 export const RowPrimaryWrapper = styled.div<InterfaceLayoutProps>`
   order: ${(props) => props.vOrder};
-  box-sizing: border-box;
   flex: 1;
   flex-basis: 100%;
   max-width: 100%;
@@ -380,7 +378,6 @@ export const RowPrimaryWrapper = styled.div<InterfaceLayoutProps>`
  */
 export const RowSecondaryWrapper = styled.div<InterfaceLayoutProps>`
   order: ${(props) => props.vOrder};
-  box-sizing: border-box;
   flex-basis: 100%;
   width: 100%;
   border-radius: 1rem;
@@ -407,9 +404,9 @@ export const RowSecondaryWrapper = styled.div<InterfaceLayoutProps>`
  * General spacer for separating content by row.
  */
 export const Separator = styled.div`
-  border-bottom: 1px solid ${borderPrimary};
+  border-bottom: 1px solid var(--border-primary-color);
   width: 100%;
-  margin: 0.75rem 0;
+  margin: 0.67rem 0;
 `;
 
 /* TopBarWrapper
@@ -417,22 +414,21 @@ export const Separator = styled.div`
  * Positioned under titles for a Go Back button and other page header info.
  */
 export const TopBarWrapper = styled.div`
+  border-bottom: 1px solid var(--border-primary-color);
   display: flex;
   flex-flow: row wrap;
   align-items: center;
-  border-bottom: 1px solid ${borderPrimary};
-  padding-bottom: 0.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
   width: 100%;
-  margin-top: 0.4rem;
   margin-bottom: 0.25rem;
 
-  button {
-    padding: 0.75rem 1rem;
+  > span {
     margin-right: 1rem;
   }
 
   h3 {
-    color: ${textSecondary};
+    color: var(--text-color-secondary);
     font-size: 1.15rem;
     margin: 0.25rem 0;
     min-height: 2rem;
@@ -448,4 +444,14 @@ export const TopBarWrapper = styled.div`
       margin: 0 0 0 1rem;
     }
   }
+`;
+
+/* ButtonRowWrapper
+ *
+ * A flex container for a row of buttons
+ */
+export const ButtonRowWrapper = styled.div<{ verticalSpacing?: boolean }>`
+  display: flex;
+  align-items: center;
+  margin-top: ${(props) => (props.verticalSpacing ? '1rem' : 0)};
 `;

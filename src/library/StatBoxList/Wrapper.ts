@@ -1,37 +1,31 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import styled from 'styled-components';
 import { motion } from 'framer-motion';
-
-import {
-  textSecondary,
-  textInvert,
-  backgroundSecondary,
-  tooltipBackground,
-  cardShadow,
-  shadowColor,
-  borderPrimary,
-  cardBorder,
-} from 'theme';
+import styled from 'styled-components';
 
 export const Wrapper = styled.div`
   display: flex;
   flex-flow: column nowrap;
-  justify-content: flex-start;
 `;
 
 export const ListWrapper = styled.div`
   display: flex;
   flex-flow: row wrap;
   padding-top: 1rem;
+
+  > div:last-child {
+    margin-bottom: 0;
+    .content {
+      margin-right: 0;
+    }
+  }
 `;
 
 export const StatBoxWrapper = styled(motion.div)`
   display: flex;
   flex-flow: column wrap;
   z-index: 0;
-  flex-basis: 100%;
   flex: 1;
   flex-basis: 100%;
   margin-bottom: 1rem;
@@ -45,9 +39,9 @@ export const StatBoxWrapper = styled(motion.div)`
 
   /* responsive screen sizing */
   h3 {
+    font-variation-settings: 'wght' 580;
     font-size: 1.2rem;
   }
-
   @media (min-width: 950px) {
     max-width: 300px;
     h3 {
@@ -56,14 +50,16 @@ export const StatBoxWrapper = styled(motion.div)`
   }
 
   .content {
-    border: ${cardBorder} ${borderPrimary};
-    box-shadow: ${cardShadow} ${shadowColor};
-    background: ${backgroundSecondary};
+    background: var(--background-primary);
+    box-shadow: var(--card-shadow) var(--card-shadow-color-secondary);
+    @media (max-width: 799px) {
+      box-shadow: var(--card-shadow) var(--card-shadow-color);
+    }
     display: flex;
     border-radius: 0.95rem;
     margin-right: 1.25rem;
-    padding: 0.9rem 0;
-    max-height: 3.5rem;
+    padding: 0.9rem 0rem;
+    max-height: 5.25rem;
     flex-flow: row wrap;
 
     @media (max-width: 749px) {
@@ -81,27 +77,21 @@ export const StatBoxWrapper = styled(motion.div)`
       display: flex;
       flex-flow: row wrap;
       align-items: center;
-
-      .help-icon {
-        margin-left: 0.6rem;
-      }
     }
 
     > .chart {
       position: relative;
       display: flex;
-      flex-flow: row nowrap;
       justify-content: center;
       align-items: center;
       padding-left: 1rem;
 
       .graph {
-        opacity: 0.75;
         overflow: hidden;
       }
 
       .tooltip {
-        background: ${tooltipBackground};
+        background: var(--background-invert);
         opacity: 0;
         position: absolute;
         top: -20px;
@@ -109,13 +99,13 @@ export const StatBoxWrapper = styled(motion.div)`
         z-index: 2;
         border-radius: 0.5rem;
         padding: 0 0.5rem;
-        width: auto;
-        max-width: 200px;
+        width: max-content;
+        max-width: 250px;
         transition: opacity 0.1s;
 
         h3 {
+          color: var(--text-color-invert);
           text-align: center;
-          color: ${textInvert};
           margin: 0;
           font-size: 0.9rem;
         }
@@ -140,8 +130,6 @@ export const StatBoxWrapper = styled(motion.div)`
       h3 {
         display: flex;
         flex-flow: row wrap;
-        justify-content: flex-start;
-        align-items: flex-start;
         margin-bottom: 0.3rem;
 
         &.text {
@@ -149,14 +137,67 @@ export const StatBoxWrapper = styled(motion.div)`
         }
 
         span.total {
-          color: ${textSecondary};
-          font-size: 0.9rem;
+          color: var(--text-color-secondary);
+          font-size: 0.95rem;
           margin-left: 0.4rem;
-          margin-top: 0rem;
+          position: relative;
+          bottom: 0.1rem;
         }
       }
     }
   }
 `;
 
-export default Wrapper;
+export const TextTitleWrapper = styled.div<{ primary?: boolean }>`
+  color: ${(props) =>
+    props.primary === true
+      ? 'var(--network-color-primary)'
+      : 'var(--text-color-primary)'};
+  font-variation-settings: 'wght' 580;
+  display: flex;
+  flex-flow: row wrap;
+  margin-bottom: 0.15rem;
+  font-size: 1.2rem;
+  @media (min-width: 950px) {
+    max-width: 300px;
+    font-size: 1.25rem;
+  }
+
+  &.text {
+    margin-top: 0.15rem;
+  }
+
+  span {
+    color: var(--text-color-secondary);
+    font-size: 0.95rem;
+    margin-left: 0.55rem;
+    margin-top: 0.1rem;
+    opacity: 0.85;
+  }
+`;
+
+export const TimeLeftWrapper = styled.div<{ primary?: boolean }>`
+  color: ${(props) =>
+    props.primary === true
+      ? 'var(--network-color-primary)'
+      : 'var(--text-color-primary)'};
+  font-variation-settings: 'wght' 550;
+  display: flex;
+  flex-flow: row wrap;
+  font-size: 1.2rem;
+  @media (min-width: 950px) {
+    max-width: 300px;
+    font-size: 1.25rem;
+  }
+  margin-bottom: 0.15rem;
+
+  span {
+    color: var(--text-color-secondary);
+    font-variation-settings: 'wght' 500;
+    font-size: 0.95rem;
+    margin-left: 0.3rem;
+    margin-top: 0.1rem;
+    margin-right: 0.75rem;
+    opacity: 0.85;
+  }
+`;

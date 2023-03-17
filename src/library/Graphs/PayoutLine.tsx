@@ -1,33 +1,33 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Line } from 'react-chartjs-2';
+import BigNumber from 'bignumber.js';
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
 } from 'chart.js';
 import { useApi } from 'contexts/Api';
-import {
-  defaultThemes,
-  networkColors,
-  networkColorsSecondary,
-  networkColorsTransparent,
-} from 'theme/default';
-import { useTheme } from 'contexts/Themes';
-import { humanNumber } from 'Utils';
-import { useUi } from 'contexts/UI';
-import { useStaking } from 'contexts/Staking';
 import { usePoolMemberships } from 'contexts/Pools/PoolMemberships';
-import { AnySubscan } from 'types';
+import { useStaking } from 'contexts/Staking';
 import { useSubscan } from 'contexts/Subscan';
-import { PayoutLineProps } from './types';
-import { combineRewardsByDay, formatRewardsForGraphs } from './Utils';
+import { useTheme } from 'contexts/Themes';
+import { useUi } from 'contexts/UI';
+import { Line } from 'react-chartjs-2';
+import { useTranslation } from 'react-i18next';
+import { graphColors } from 'styles/graphs';
+import type { AnySubscan } from 'types';
+import type { PayoutLineProps } from './types';
+import {
+  calculatePayoutAverages,
+  combineRewardsByDay,
+  formatRewardsForGraphs,
+} from './Utils';
 
 ChartJS.register(
   CategoryScale,
@@ -39,37 +39,47 @@ ChartJS.register(
   Legend
 );
 
-export const PayoutLine = (props: PayoutLineProps) => {
-  const { days, average, height, background } = props;
-
+export const PayoutLine = ({
+  days,
+  average,
+  height,
+  background,
+}: PayoutLineProps) => {
+  const { t } = useTranslation('library');
   const { mode } = useTheme();
-  const { network } = useApi();
+  const { unit, units, colors } = useApi().network;
   const { isSyncing } = useUi();
   const { inSetup } = useStaking();
   const { membership: poolMembership } = usePoolMemberships();
   const { payouts, poolClaims } = useSubscan();
 
-  const { units } = network;
   const notStaking = !isSyncing && inSetup() && !poolMembership;
   const poolingOnly = !isSyncing && inSetup() && poolMembership !== null;
 
-  const { payoutsByDay, poolClaimsByDay } = formatRewardsForGraphs(
-    days,
-    average,
-    units,
-    payouts,
-    poolClaims
+  // remove slashes from payouts (graph does not support negative values).
+  const payoutsNoSlash = payouts.filter(
+    (p: AnySubscan) => p.event_id !== 'Slashed'
   );
 
-  // combine payouts and pool claims into one dataset
-  const combinedPayouts = combineRewardsByDay(payoutsByDay, poolClaimsByDay);
+  const { payoutsByDay, poolClaimsByDay } = formatRewardsForGraphs(
+    days,
+    units,
+    payoutsNoSlash,
+    poolClaims,
+    [] // Note: we are not using `unclaimedPayouts` here.
+  );
+
+  // combine payouts and pool claims into one dataset and calculate averages.
+  const combined = combineRewardsByDay(payoutsByDay, poolClaimsByDay);
+
+  const combinedPayouts = calculatePayoutAverages(combined, 10, days);
 
   // determine color for payouts
   const color = notStaking
-    ? networkColors[`${network.name}-${mode}`]
+    ? colors.primary[mode]
     : !poolingOnly
-    ? networkColors[`${network.name}-${mode}`]
-    : networkColorsSecondary[`${network.name}-${mode}`];
+    ? colors.primary[mode]
+    : colors.secondary[mode];
 
   // configure graph options
   const options = {
@@ -79,7 +89,6 @@ export const PayoutLine = (props: PayoutLineProps) => {
       x: {
         grid: {
           display: false,
-          drawBorder: false,
         },
         ticks: {
           display: false,
@@ -92,10 +101,11 @@ export const PayoutLine = (props: PayoutLineProps) => {
           display: false,
           beginAtZero: false,
         },
+        border: {
+          display: false,
+        },
         grid: {
-          drawBorder: false,
-          color: defaultThemes.graphs.grid[mode],
-          borderColor: defaultThemes.transparent[mode],
+          color: graphColors.grid[mode],
         },
       },
     },
@@ -105,18 +115,18 @@ export const PayoutLine = (props: PayoutLineProps) => {
       },
       tooltip: {
         displayColors: false,
-        backgroundColor: defaultThemes.graphs.tooltip[mode],
-        bodyColor: defaultThemes.text.invert[mode],
+        backgroundColor: graphColors.tooltip[mode],
+        titleColor: graphColors.label[mode],
+        bodyColor: graphColors.label[mode],
         bodyFont: {
           weight: '600',
         },
         callbacks: {
-          title: () => {
-            return [];
-          },
-          label: (context: any) => {
-            return ` ${humanNumber(context.parsed.y)} ${network.unit}`;
-          },
+          title: () => [],
+          label: (context: any) =>
+            ` ${new BigNumber(context.parsed.y)
+              .decimalPlaces(units)
+              .toFormat()} ${unit}`,
         },
         intersect: false,
         interaction: {
@@ -127,15 +137,11 @@ export const PayoutLine = (props: PayoutLineProps) => {
   };
 
   const data = {
-    labels: payoutsByDay.map(() => {
-      return '';
-    }),
+    labels: combinedPayouts.map(() => ''),
     datasets: [
       {
-        label: 'Payout',
-        data: combinedPayouts.map((item: AnySubscan) => {
-          return item?.amount ?? 0;
-        }),
+        label: t('payout'),
+        data: combinedPayouts.map((item: AnySubscan) => item?.amount ?? 0),
         borderColor: color,
         backgroundColor: color,
         pointStyle: undefined,
@@ -147,14 +153,14 @@ export const PayoutLine = (props: PayoutLineProps) => {
 
   return (
     <>
-      <h5 className="secondary">
-        {average > 1 ? `${average} Day Average` : <>&nbsp;</>}
+      <h5 className="secondary" style={{ paddingLeft: '1.5rem' }}>
+        {average > 1 ? `${average} ${t('dayAverage')}` : null}
       </h5>
       <div
         className="graph_line"
         style={{
-          height: height === undefined ? 'auto' : height,
-          background: background === undefined ? 'none' : background,
+          height: height || 'auto',
+          background: background || 'none',
         }}
       >
         <Line options={options} data={data} />
@@ -162,5 +168,3 @@ export const PayoutLine = (props: PayoutLineProps) => {
     </>
   );
 };
-
-export default PayoutLine;

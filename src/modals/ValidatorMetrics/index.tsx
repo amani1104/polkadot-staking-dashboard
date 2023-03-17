@@ -1,50 +1,55 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect } from 'react';
+import { ButtonHelp } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
+import { useApi } from 'contexts/Api';
+import { useHelp } from 'contexts/Help';
 import { useModal } from 'contexts/Modal';
+import { useNetworkMetrics } from 'contexts/Network';
+import { useStaking } from 'contexts/Staking';
 import { useSubscan } from 'contexts/Subscan';
 import { EraPoints as EraPointsGraph } from 'library/Graphs/EraPoints';
-import { SubscanButton } from 'library/SubscanButton';
+import { formatSize } from 'library/Graphs/Utils';
 import { GraphWrapper } from 'library/Graphs/Wrappers';
-import { useSize, formatSize } from 'library/Graphs/Utils';
-import Identicon from 'library/Identicon';
-import { clipAddress, humanNumber, planckBnToUnit, rmCommas } from 'Utils';
-import { useNetworkMetrics } from 'contexts/Network';
-import { StatusLabel } from 'library/StatusLabel';
+import { useSize } from 'library/Hooks/useSize';
+import { Identicon } from 'library/Identicon';
 import { Title } from 'library/Modal/Title';
-import { useStaking } from 'contexts/Staking';
-import { BN } from 'bn.js';
-import { PaddingWrapper } from 'modals/Wrappers';
-import { useApi } from 'contexts/Api';
 import { StatsWrapper, StatWrapper } from 'library/Modal/Wrappers';
-import { OpenHelpIcon } from 'library/OpenHelpIcon';
+import { StatusLabel } from 'library/StatusLabel';
+import { SubscanButton } from 'library/SubscanButton';
+import { PaddingWrapper } from 'modals/Wrappers';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { clipAddress, planckToUnit, rmCommas } from 'Utils';
 
 export const ValidatorMetrics = () => {
+  const { t } = useTranslation('modals');
   const {
     network: { units, unit },
   } = useApi();
   const { config } = useModal();
   const { address, identity } = config;
   const { fetchEraPoints }: any = useSubscan();
-  const { metrics } = useNetworkMetrics();
+  const { activeEra } = useNetworkMetrics();
   const { eraStakers } = useStaking();
   const { stakers } = eraStakers;
+  const { openHelp } = useHelp();
 
   // is the validator in the active era
   const validatorInEra =
     stakers.find((s: any) => s.address === address) || null;
 
-  let ownStake = new BN(0);
-  let otherStake = new BN(0);
+  let validatorOwnStake = new BigNumber(0);
+  let otherStake = new BigNumber(0);
   if (validatorInEra) {
     const { others, own } = validatorInEra;
 
     others.forEach((o: any) => {
-      otherStake = otherStake.add(new BN(rmCommas(o.value)));
+      otherStake = otherStake.plus(rmCommas(o.value));
     });
     if (own) {
-      ownStake = new BN(rmCommas(own));
+      validatorOwnStake = new BigNumber(rmCommas(own));
     }
   }
   const [list, setList] = useState([]);
@@ -54,7 +59,7 @@ export const ValidatorMetrics = () => {
   const { width, height, minHeight } = formatSize(size, 300);
 
   const handleEraPoints = async () => {
-    const _list = await fetchEraPoints(address, metrics.activeEra.index);
+    const _list = await fetchEraPoints(address, activeEra.index);
     setList(_list);
   };
 
@@ -64,19 +69,19 @@ export const ValidatorMetrics = () => {
 
   const stats = [
     {
-      label: 'Self Stake',
-      value: `${humanNumber(planckBnToUnit(ownStake, units))} ${unit}`,
+      label: t('selfStake'),
+      value: `${planckToUnit(validatorOwnStake, units).toFormat()} ${unit}`,
       help: 'Self Stake',
     },
     {
-      label: 'Nominator Stake',
-      value: `${humanNumber(planckBnToUnit(otherStake, units))} ${unit}`,
+      label: t('nominatorStake'),
+      value: `${planckToUnit(otherStake, units).toFormat()} ${unit}`,
       help: 'Nominator Stake',
     },
   ];
   return (
     <>
-      <Title title="Validator Metrics" />
+      <Title title={t('validatorMetrics')} />
       <div className="header">
         <Identicon value={address} size={33} />
         <h2>
@@ -92,9 +97,10 @@ export const ValidatorMetrics = () => {
               <StatWrapper key={`metrics_stat_${i}`}>
                 <div className="inner">
                   <h4>
-                    {s.label} <OpenHelpIcon helpKey={s.help} />
+                    {s.label}{' '}
+                    <ButtonHelp marginLeft onClick={() => openHelp(s.help)} />
                   </h4>
-                  <h3>{s.value}</h3>
+                  <h2>{s.value}</h2>
                 </div>
               </StatWrapper>
             )
@@ -114,15 +120,17 @@ export const ValidatorMetrics = () => {
             boxShadow: 'none',
           }}
           flex
+          transparent
         >
           <h4>
-            Recent Era Points <OpenHelpIcon helpKey="Era Points" />
+            {t('recentEraPoints')}{' '}
+            <ButtonHelp marginLeft onClick={() => openHelp('Era Points')} />
           </h4>
           <div className="inner" ref={ref} style={{ minHeight }}>
             <StatusLabel
               status="active_service"
               statusFor="subscan"
-              title="Subscan Disabled"
+              title={t('subscanDisabled')}
             />
             <div
               className="graph"
@@ -141,5 +149,3 @@ export const ValidatorMetrics = () => {
     </>
   );
 };
-
-export default ValidatorMetrics;

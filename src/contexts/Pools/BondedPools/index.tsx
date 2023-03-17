@@ -1,17 +1,17 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect, useRef } from 'react';
-import {
+import { u8aToString, u8aUnwrapBytes } from '@polkadot/util';
+import type {
   BondedPool,
   BondedPoolsContextState,
   MaybePool,
   NominationStatuses,
 } from 'contexts/Pools/types';
-import { AnyApi, AnyMetaBatch, Fn, MaybeAccount } from 'types';
-import { setStateWithRef } from 'Utils';
 import { useStaking } from 'contexts/Staking';
-import { u8aToString, u8aUnwrapBytes } from '@polkadot/util';
+import React, { useEffect, useRef, useState } from 'react';
+import type { AnyApi, AnyMetaBatch, Fn, MaybeAccount } from 'types';
+import { setStateWithRef, shuffle } from 'Utils';
 import { useApi } from '../../Api';
 import { usePoolsConfig } from '../PoolsConfig';
 import { defaultBondedPoolsContext } from './defaults';
@@ -70,11 +70,9 @@ export const BondedPoolsProvider = ({
   }, [bondedPools]);
 
   const unsubscribe = () => {
-    Object.values(poolSubsRef.current).map((batch: Array<Fn>) => {
-      return Object.entries(batch).map(([, v]) => {
-        return v();
-      });
-    });
+    Object.values(poolSubsRef.current).map((batch: Array<Fn>) =>
+      Object.entries(batch).map(([, v]) => v())
+    );
     setBondedPools([]);
   };
 
@@ -83,11 +81,13 @@ export const BondedPoolsProvider = ({
     if (!api) return;
 
     const _exposures = await api.query.nominationPools.bondedPools.entries();
-    const exposures = _exposures.map(([_keys, _val]: AnyApi) => {
+    let exposures = _exposures.map(([_keys, _val]: AnyApi) => {
       const id = _keys.toHuman()[0];
       const pool = _val.toHuman();
       return getPoolWithAddresses(id, pool);
     });
+
+    exposures = shuffle(exposures);
     setBondedPools(exposures);
   };
 
@@ -141,8 +141,15 @@ export const BondedPoolsProvider = ({
       }
     } else {
       // tidy up if existing batch exists
-      delete poolMetaBatches[key];
-      delete poolMetaBatchesRef.current[key];
+      const updatedPoolMetaBatches: AnyMetaBatch = {
+        ...poolMetaBatchesRef.current,
+      };
+      delete updatedPoolMetaBatches[key];
+      setStateWithRef(
+        updatedPoolMetaBatches,
+        setPoolMetaBatch,
+        poolMetaBatchesRef
+      );
 
       if (poolSubsRef.current[key] !== undefined) {
         for (const unsub of poolSubsRef.current[key]) {
@@ -193,7 +200,7 @@ export const BondedPoolsProvider = ({
       return unsub;
     };
 
-    const subscribeToNominators = async (_addresses: AnyApi) => {
+    const subscribeToNominations = async (_addresses: AnyApi) => {
       const unsub = await api.query.staking.nominators.multi(
         _addresses,
         (_nominations: AnyApi) => {
@@ -201,10 +208,8 @@ export const BondedPoolsProvider = ({
           for (let i = 0; i < _nominations.length; i++) {
             nominations.push(_nominations[i].toHuman());
           }
-
           const _batchesUpdated = Object.assign(poolMetaBatchesRef.current);
           _batchesUpdated[key].nominations = nominations;
-
           setStateWithRef(
             { ..._batchesUpdated },
             setPoolMetaBatch,
@@ -218,7 +223,7 @@ export const BondedPoolsProvider = ({
     // initiate subscriptions
     await Promise.all([
       subscribeToMetadata(ids),
-      subscribeToNominators(addresses),
+      subscribeToNominations(addresses),
     ]).then((unsubs: Array<Fn>) => {
       addMetaBatchUnsubs(key, unsubs);
     });
@@ -285,13 +290,11 @@ export const BondedPoolsProvider = ({
   /*
    *  Helper: to add addresses to pool record.
    */
-  const getPoolWithAddresses = (id: number, pool: BondedPool) => {
-    return {
-      ...pool,
-      id,
-      addresses: createAccounts(id),
-    };
-  };
+  const getPoolWithAddresses = (id: number, pool: BondedPool) => ({
+    ...pool,
+    id,
+    addresses: createAccounts(id),
+  });
 
   const getBondedPool = (poolId: MaybePool) => {
     const pool = bondedPools.find((p: BondedPool) => p.id === poolId) ?? null;
@@ -442,6 +445,44 @@ export const BondedPoolsProvider = ({
     return pools;
   };
 
+  // determine roles to replace from roleEdits
+  const toReplace = (roleEdits: any) => {
+    const root = roleEdits?.root?.newAddress ?? '';
+    const nominator = roleEdits?.nominator?.newAddress ?? '';
+    const stateToggler = roleEdits?.stateToggler?.newAddress ?? '';
+
+    return {
+      root,
+      nominator,
+      stateToggler,
+    };
+  };
+
+  // replaces the pool roles from roleEdits
+  const replacePoolRoles = (poolId: number, roleEdits: any) => {
+    let pool =
+      bondedPools.find((b: BondedPool) => String(b.id) === String(poolId)) ||
+      null;
+
+    if (!pool) return;
+
+    pool = {
+      ...pool,
+      roles: {
+        ...pool.roles,
+        ...toReplace(roleEdits),
+      },
+    };
+
+    const newBondedPools = [
+      ...bondedPools.map((b: BondedPool) =>
+        String(b.id) === String(poolId) && pool !== null ? pool : b
+      ),
+    ];
+
+    setBondedPools(newBondedPools);
+  };
+
   return (
     <BondedPoolsContext.Provider
       value={{
@@ -455,6 +496,7 @@ export const BondedPoolsProvider = ({
         getPoolNominationStatusCode,
         getAccountRoles,
         getAccountPools,
+        replacePoolRoles,
         poolSearchFilter,
         bondedPools,
         meta: poolMetaBatchesRef.current,

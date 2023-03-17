@@ -1,17 +1,13 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import styled from 'styled-components';
-import { borderPrimary, textPrimary, textSecondary } from 'theme';
-import { SMALL_FONT_SIZE_MAX_WIDTH } from 'consts';
 
 export const TitleWrapper = styled.div<{ fixed: boolean }>`
-  box-sizing: border-box;
   padding: ${(props) =>
-    props.fixed ? '0.6rem 1rem 1.5rem 1rem' : '2rem 1.5rem 0 1.5rem'};
+    props.fixed ? '0.6rem 1rem 0rem 1rem' : '2rem 1rem 0 1rem'};
   display: flex;
   flex-flow: row wrap;
-  justify-content: flex-start;
   align-items: center;
   width: 100%;
 
@@ -26,16 +22,22 @@ export const TitleWrapper = styled.div<{ fixed: boolean }>`
     }
 
     path {
-      fill: ${textPrimary};
+      fill: var(--text-color-primary);
     }
 
     &:first-child {
       flex-grow: 1;
 
       > h2 {
+        display: flex;
+        align-items: center;
         font-family: 'Unbounded', 'sans-serif', sans-serif;
         font-size: 1.3rem;
         margin: 0;
+
+        > button {
+          margin-left: 0.85rem;
+        }
       }
       > svg {
         margin-right: 0.9rem;
@@ -44,6 +46,9 @@ export const TitleWrapper = styled.div<{ fixed: boolean }>`
 
     &:last-child {
       button {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
         opacity: 0.25;
         &:hover {
           opacity: 1;
@@ -57,42 +62,76 @@ export const StatsWrapper = styled.div`
   width: 100%;
   display: flex;
   flex-flow: row wrap;
+  margin-top: 1rem;
 `;
 export const StatWrapper = styled.div`
-  box-sizing: border-box;
   display: flex;
   flex-flow: column wrap;
-  margin-bottom: 0.5rem;
-  padding: 0 0.5rem;
-  flex-basis: 50%;
+  margin-bottom: 1rem;
+  padding: 0 0.75rem;
   flex-grow: 1;
+  flex-basis: 100%;
 
-  @media (max-width: ${SMALL_FONT_SIZE_MAX_WIDTH}px) {
-    flex-basis: 100%;
+  @media (min-width: 600px) {
+    margin-bottom: 0.5rem;
+  }
+
+  @media (min-width: 601px) {
+    flex-basis: 33%;
   }
 
   > .inner {
-    box-sizing: border-box;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid ${borderPrimary};
+    border-bottom: 1px solid var(--border-primary-color);
+    padding-bottom: 0.5rem;
 
-    > h3,
+    > h2,
+    h3,
     h4 {
-      margin: 0;
+      margin: 0.25rem 0;
     }
     h4 {
-      color: ${textPrimary};
-      margin: 0.6rem 0;
+      margin: 0rem 0 0.75rem 0;
       display: flex;
       align-items: center;
 
-      > .help-icon {
-        margin-left: 0.55rem;
+      .icon {
+        margin-right: 0.425rem;
       }
     }
-    h3 {
-      color: ${textSecondary};
-      padding-bottom: 0.15rem;
+    h2,
+    h3,
+    h4 {
+      color: var(--text-color-secondary);
     }
+  }
+`;
+
+export const CloseWrapper = styled.div`
+  position: absolute;
+  right: 1.5rem;
+  top: 1.5rem;
+
+  > button {
+    opacity: 0.4;
+    transition: opacity 0.15s ease-in-out;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+`;
+
+export const ActionWrapper = styled.h3`
+  border-bottom: 1px solid var(--border-primary-color);
+  color: var(--text-color-primary);
+  margin: 1.25rem 0 0 0;
+  width: 100%;
+  padding-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  font-variation-settings: 'wght' 650;
+
+  > svg {
+    margin-right: 0.5rem;
   }
 `;

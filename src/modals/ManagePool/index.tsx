@@ -1,16 +1,18 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect, useRef } from 'react';
-import { faCog } from '@fortawesome/free-solid-svg-icons';
 import { useModal } from 'contexts/Modal';
 import { Title } from 'library/Modal/Title';
-import { Wrapper, CardsWrapper, FixedContentWrapper } from './Wrappers';
-import { Tasks } from './Tasks';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Forms } from './Forms';
+import { Tasks } from './Tasks';
+import { CardsWrapper, FixedContentWrapper, Wrapper } from './Wrappers';
 
 export const ManagePool = () => {
+  const { t } = useTranslation('modals');
   const { setModalHeight } = useModal();
+
   // modal task
   const [task, setTask] = useState(null);
 
@@ -36,7 +38,7 @@ export const ManagePool = () => {
   return (
     <Wrapper>
       <FixedContentWrapper ref={headerRef}>
-        <Title title="Manage Pool" icon={faCog} fixed />
+        <Title title={t('managePool')} fixed />
       </FixedContentWrapper>
       <CardsWrapper
         animate={section === 0 ? 'home' : 'next'}

@@ -1,20 +1,15 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { useState, useEffect } from 'react';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
-import {
-  capitalizeFirstLetter,
-  humanNumber,
-  planckBnToUnit,
-  rmCommas,
-  toFixedIfNecessary,
-} from 'Utils';
-import { ValidatorStatusWrapper } from 'library/ListItem/Wrappers';
 import { useBondedPools } from 'contexts/Pools/BondedPools';
 import { useStaking } from 'contexts/Staking';
-import { Pool } from 'library/Pool/types';
+import { ValidatorStatusWrapper } from 'library/ListItem/Wrappers';
+import type { Pool } from 'library/Pool/types';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { capitalizeFirstLetter, planckToUnit, rmCommas } from 'Utils';
 
 export const PoolBonded = ({
   pool,
@@ -25,11 +20,11 @@ export const PoolBonded = ({
   batchKey: string;
   batchIndex: number;
 }) => {
-  const { addresses, points } = pool;
-
+  const { t } = useTranslation('library');
   const { network } = useApi();
   const { eraStakers, getNominationsStatusFromTargets } = useStaking();
   const { meta, getPoolNominationStatusCode } = useBondedPools();
+  const { addresses, points } = pool;
   const { units, unit } = network;
 
   // get pool targets from nominations meta batch
@@ -55,6 +50,7 @@ export const PoolBonded = ({
   // recalculate nominations status as app syncs
   useEffect(() => {
     if (
+      targets.length &&
       nominationsStatus === null &&
       eraStakers.stakers.length &&
       nominations.length
@@ -67,10 +63,10 @@ export const PoolBonded = ({
   // recalculate nominations status
   useEffect(() => {
     handleNominationsStatus();
-  }, [meta]);
+  }, [meta, pool, eraStakers.stakers.length]);
 
   // calculate total bonded pool amount
-  const poolBonded = planckBnToUnit(new BN(rmCommas(points)), units);
+  const poolBonded = planckToUnit(new BigNumber(rmCommas(points)), units);
 
   // determine nominations status and display
   const nominationStatus = getPoolNominationStatusCode(nominationsStatus);
@@ -79,13 +75,13 @@ export const PoolBonded = ({
     <>
       <ValidatorStatusWrapper status={nominationStatus}>
         <h5>
-          {nominationStatus === null
-            ? `Syncing...`
+          {nominationStatus === null || !eraStakers.stakers.length
+            ? `${t('syncing')}...`
             : targets.length
-            ? capitalizeFirstLetter(nominationStatus ?? '')
-            : 'Not Nominating'}
+            ? capitalizeFirstLetter(t(`${nominationStatus}`) ?? '')
+            : t('notNominating')}
           {' / '}
-          Bonded: {humanNumber(toFixedIfNecessary(poolBonded, 3))} {unit}
+          {t('bonded')}: {poolBonded.decimalPlaces(3).toFormat()} {unit}
         </h5>
       </ValidatorStatusWrapper>
     </>

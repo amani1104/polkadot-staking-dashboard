@@ -1,23 +1,25 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { PoolAccount } from 'library/PoolAccount';
+import { useBalances } from 'contexts/Accounts/Balances';
 import { useConnect } from 'contexts/Connect';
-import { useStaking } from 'contexts/Staking';
-import { useBalances } from 'contexts/Balances';
 import { useActivePools } from 'contexts/Pools/ActivePools';
+import { useStaking } from 'contexts/Staking';
 import { useUi } from 'contexts/UI';
+import { PoolAccount } from 'library/PoolAccount';
+import { useTranslation } from 'react-i18next';
 import { clipAddress } from 'Utils';
 import { Account } from '../Account';
 import { HeadingWrapper } from './Wrappers';
 
 export const Connected = () => {
+  const { t } = useTranslation('library');
   const { activeAccount, accountHasSigner } = useConnect();
   const { hasController, getControllerNotImported } = useStaking();
   const { getBondedAccount } = useBalances();
   const controller = getBondedAccount(activeAccount);
   const { selectedActivePool } = useActivePools();
-  const { isSyncing } = useUi();
+  const { isNetworkSyncing } = useUi();
 
   let poolAddress = '';
   if (selectedActivePool) {
@@ -25,15 +27,17 @@ export const Connected = () => {
     poolAddress = addresses.stash;
   }
 
-  const activeAccountLabel = isSyncing
+  const activeAccountLabel = isNetworkSyncing
     ? undefined
     : hasController()
-    ? 'Stash'
+    ? controller !== activeAccount
+      ? 'Stash'
+      : t('nominator')
     : undefined;
 
   return (
     <>
-      {activeAccount && (
+      {activeAccount ? (
         <>
           {/* default account display / stash label if actively nominating */}
           <HeadingWrapper>
@@ -48,7 +52,9 @@ export const Connected = () => {
           </HeadingWrapper>
 
           {/* controller account display / hide if no controller present */}
-          {hasController() && !isSyncing && (
+          {hasController() &&
+          controller !== activeAccount &&
+          !isNetworkSyncing ? (
             <HeadingWrapper>
               <Account
                 value={controller ?? ''}
@@ -57,7 +63,7 @@ export const Connected = () => {
                   getControllerNotImported(controller)
                     ? controller
                       ? clipAddress(controller)
-                      : 'Not Imported'
+                      : `${t('notImported')}`
                     : undefined
                 }
                 format="name"
@@ -66,15 +72,15 @@ export const Connected = () => {
                 filled
               />
             </HeadingWrapper>
-          )}
+          ) : null}
 
           {/* pool account display / hide if not in pool */}
-          {selectedActivePool !== null && !isSyncing && (
+          {selectedActivePool !== null && !isNetworkSyncing && (
             <HeadingWrapper>
               <PoolAccount
                 value={poolAddress}
                 pool={selectedActivePool}
-                label="Pool"
+                label={`${t('pool')}`}
                 canClick={false}
                 onClick={() => {}}
                 filled
@@ -82,7 +88,7 @@ export const Connected = () => {
             </HeadingWrapper>
           )}
         </>
-      )}
+      ) : null}
     </>
   );
 };

@@ -1,33 +1,35 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useEffect, useRef } from 'react';
+import { faCompressAlt, faExpandAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExpandAlt, faCompressAlt } from '@fortawesome/free-solid-svg-icons';
-import throttle from 'lodash.throttle';
-import { useUi } from 'contexts/UI';
-import { useModal } from 'contexts/Modal';
+import { SideMenuStickyThreshold } from 'consts';
 import { useApi } from 'contexts/Api';
+import { useHelp } from 'contexts/Help';
+import { useModal } from 'contexts/Modal';
+import { useTheme } from 'contexts/Themes';
+import { useUi } from 'contexts/UI';
+import type { UIContextInterface } from 'contexts/UI/types';
 import { ReactComponent as CogOutlineSVG } from 'img/cog-outline.svg';
-import { ReactComponent as LogoGithubSVG } from 'img/logo-github.svg';
-import { ReactComponent as InfoSVG } from 'img/info.svg';
 import { ReactComponent as ForumSVG } from 'img/forum.svg';
+import { ReactComponent as InfoSVG } from 'img/info.svg';
+import { ReactComponent as LanguageSVG } from 'img/language.svg';
+import { ReactComponent as LogoGithubSVG } from 'img/logo-github.svg';
 import { ReactComponent as MoonOutlineSVG } from 'img/moon-outline.svg';
 import { ReactComponent as SunnyOutlineSVG } from 'img/sunny-outline.svg';
-import { SIDE_MENU_STICKY_THRESHOLD } from 'consts';
 import { useOutsideAlerter } from 'library/Hooks';
-import { UIContextInterface } from 'contexts/UI/types';
-import { ConnectionStatus } from 'contexts/Api/types';
-import { defaultThemes } from 'theme/default';
-import { useTheme } from 'contexts/Themes';
-import { useHelp } from 'contexts/Help';
-import { Separator, Wrapper, ConnectionSymbol } from './Wrapper';
-import { Secondary } from './Secondary';
-import Heading from './Heading/Heading';
+import throttle from 'lodash.throttle';
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { capitalizeFirstLetter } from 'Utils';
+import { Heading } from './Heading/Heading';
 import { Main } from './Main';
+import { Secondary } from './Secondary';
+import { ConnectionSymbol, Separator, Wrapper } from './Wrapper';
 
 export const SideMenu = () => {
-  const { network, status } = useApi();
+  const { t } = useTranslation('base');
+  const { network, apiStatus } = useApi();
   const { mode, toggleTheme } = useTheme();
   const { openModalWith } = useModal();
   const {
@@ -36,7 +38,7 @@ export const SideMenu = () => {
     userSideMenuMinimised,
     setUserSideMenuMinimised,
   }: UIContextInterface = useUi();
-  const { openHelpWith } = useHelp();
+  const { openHelp } = useHelp();
 
   // listen to window resize to hide SideMenu
   useEffect(() => {
@@ -47,7 +49,7 @@ export const SideMenu = () => {
   }, []);
 
   const throttleCallback = () => {
-    if (window.innerWidth >= SIDE_MENU_STICKY_THRESHOLD) {
+    if (window.innerWidth >= SideMenuStickyThreshold) {
       setSideMenu(0);
     }
   };
@@ -61,53 +63,43 @@ export const SideMenu = () => {
     setSideMenu(0);
   });
 
-  // handle connection symbol
-  const symbolColor =
-    status === ConnectionStatus.Connecting
-      ? defaultThemes.status.warning.solid[mode]
-      : status === ConnectionStatus.Connected
-      ? defaultThemes.status.success.solid[mode]
-      : defaultThemes.status.danger.solid[mode];
-
-  // handle transparent border color
-  const borderColor =
-    status === ConnectionStatus.Connecting
-      ? defaultThemes.status.warning.transparent[mode]
-      : status === ConnectionStatus.Connected
-      ? defaultThemes.status.success.transparent[mode]
-      : defaultThemes.status.danger.transparent[mode];
+  const apiStatusClass =
+    apiStatus === 'connecting'
+      ? 'warning'
+      : apiStatus === 'connected'
+      ? 'success'
+      : 'danger';
 
   return (
     <Wrapper ref={ref} minimised={sideMenuMinimised}>
       <section>
         <Main />
-        <Heading title="Support" minimised={sideMenuMinimised} />
+        <Heading title={t('support')} minimised={sideMenuMinimised} />
         <Secondary
           onClick={() => {
-            openHelpWith(null, {});
+            openHelp(null);
           }}
-          name="Help"
+          name={t('resources')}
           minimised={sideMenuMinimised}
           icon={{
             Svg: InfoSVG,
-            size: sideMenuMinimised ? '1.6rem' : '1.4rem',
+            size: sideMenuMinimised ? '1.4em' : '1.2em',
           }}
         />
-        <Heading title="Feedback" minimised={sideMenuMinimised} />
         <Secondary
           onClick={() => openModalWith('GoToFeedback')}
-          name="Feedback"
+          name={t('feedback')}
           minimised={sideMenuMinimised}
           icon={{
             Svg: ForumSVG,
-            size: sideMenuMinimised ? '1.6rem' : '1.4rem',
+            size: sideMenuMinimised ? '1.4em' : '1.2em',
           }}
         />
         <Separator />
-        <Heading title="Network" minimised={sideMenuMinimised} />
+        <Heading title={t('network')} minimised={sideMenuMinimised} />
         <Secondary
-          name={network.name}
-          borderColor={borderColor}
+          classes={[apiStatusClass]}
+          name={capitalizeFirstLetter(network.name)}
           onClick={() => openModalWith('Networks')}
           icon={{
             Svg: network.brand.inline.svg,
@@ -115,7 +107,10 @@ export const SideMenu = () => {
           }}
           minimised={sideMenuMinimised}
           action={
-            <ConnectionSymbol color={[symbolColor]} style={{ opacity: 0.7 }} />
+            <ConnectionSymbol
+              className={apiStatusClass}
+              style={{ opacity: 0.7 }}
+            />
           }
         />
       </section>
@@ -129,7 +124,6 @@ export const SideMenu = () => {
         >
           <FontAwesomeIcon
             icon={userSideMenuMinimised ? faExpandAlt : faCompressAlt}
-            transform="grow-3"
           />
         </button>
         <button
@@ -141,27 +135,30 @@ export const SideMenu = () => {
             )
           }
         >
-          <LogoGithubSVG width="1.4rem" height="1.4rem" />
+          <LogoGithubSVG width="1.2em" height="1.2em" />
         </button>
         <button
           type="button"
-          onClick={() => openModalWith('Settings', {}, 'small')}
+          onClick={() => openModalWith('Settings', {}, 'large')}
         >
-          <CogOutlineSVG width="1.6rem" height="1.6rem" />
+          <CogOutlineSVG width="1.3em" height="1.3em" />
         </button>
-
+        <button
+          type="button"
+          onClick={() => openModalWith('ChooseLanguage', {}, 'small')}
+        >
+          <LanguageSVG width="1.25em" height="1.25em" />
+        </button>
         {mode === 'light' ? (
           <button type="button" onClick={() => toggleTheme()}>
-            <SunnyOutlineSVG width="1.7rem" height="1.7rem" />
+            <SunnyOutlineSVG width="1.25em" height="1.25em" />
           </button>
         ) : (
           <button type="button" onClick={() => toggleTheme()}>
-            <MoonOutlineSVG width="1.4rem" height="1.4rem" />
+            <MoonOutlineSVG width="1.1em" height="1.1em" />
           </button>
         )}
       </section>
     </Wrapper>
   );
 };
-
-export default SideMenu;

@@ -1,16 +1,13 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useState, useRef, useEffect } from 'react';
-import { PageTitleWrapper, MenuPaddingWrapper } from 'Wrappers';
-import { PageTitleProps } from './types';
+import { useEffect, useRef, useState } from 'react';
+import { MenuPaddingWrapper, PageTitleWrapper } from 'Wrappers';
+import type { PageTitleProps } from './types';
 
-export const PageTitle = (props: PageTitleProps) => {
-  const { title, button } = props;
-  const tabs = props.tabs ?? [];
-
+export const PageTitle = ({ title, button, tabs = [] }: PageTitleProps) => {
   const [sticky, setSticky] = useState(false);
 
   const ref = useRef<HTMLElement>(null);
@@ -80,5 +77,3 @@ export const PageTitle = (props: PageTitleProps) => {
     </>
   );
 };
-
-export default PageTitle;

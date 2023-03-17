@@ -1,51 +1,36 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
-import {
-  defaultThemes,
-  networkColors,
-  networkColorsTransparent,
-} from 'theme/default';
-import { useTheme } from 'contexts/Themes';
+import { ArcElement, Chart as ChartJS, Tooltip } from 'chart.js';
 import { useApi } from 'contexts/Api';
-import { StatPieProps } from './types';
+import { useTheme } from 'contexts/Themes';
+import { Pie } from 'react-chartjs-2';
+import { graphColors } from 'styles/graphs';
+import type { StatPieProps } from './types';
 
 ChartJS.register(ArcElement, Tooltip);
 
-export const StatPie = (props: StatPieProps) => {
-  let { value, value2 } = props;
+export const StatPie = ({ value, value2 }: StatPieProps) => {
+  const { colors } = useApi().network;
+  const { mode } = useTheme();
 
-  // format zero value graph
   const isZero = !value && !value;
   if (isZero) {
     value = 1;
     value2 = 0;
   }
-
-  const { network } = useApi();
-  const { mode } = useTheme();
-
   const borderColor = isZero
-    ? defaultThemes.buttons.toggle.background[mode]
-    : [
-        networkColors[`${network.name}-${mode}`],
-        defaultThemes.transparent[mode],
-      ];
+    ? graphColors.inactive[mode]
+    : [colors.primary[mode], graphColors.border[mode]];
 
   const backgroundColor = isZero
-    ? defaultThemes.buttons.toggle.background[mode]
-    : networkColorsTransparent[`${network.name}-${mode}`];
+    ? graphColors.inactive[mode]
+    : colors.primary[mode];
 
   const options = {
     borderColor,
-    hoverBorderColor: borderColor,
     backgroundColor,
-    hoverBackgroundColor: [
-      networkColorsTransparent[`${network.name}-${mode}`],
-      defaultThemes.transparent[mode],
-    ],
+    hoverBackgroundColor: [backgroundColor, graphColors.inactive[mode]],
     responsive: true,
     maintainAspectRatio: false,
     spacing: 0,
@@ -63,11 +48,8 @@ export const StatPie = (props: StatPieProps) => {
     datasets: [
       {
         data: [value, value2],
-        backgroundColor: [
-          networkColorsTransparent[`${network.name}-${mode}`],
-          defaultThemes.transparent[mode],
-        ],
-        borderWidth: 1.6,
+        backgroundColor: [backgroundColor, graphColors.inactive[mode]],
+        borderWidth: 0.5,
       },
     ],
   };
@@ -78,5 +60,3 @@ export const StatPie = (props: StatPieProps) => {
     </div>
   );
 };
-
-export default StatPie;

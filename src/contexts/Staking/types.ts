@@ -1,21 +1,20 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { MaybeAccount } from 'types';
+import type BigNumber from 'bignumber.js';
+import type { PayeeConfig } from 'contexts/Setup/types';
+import type { MaybeAccount } from 'types';
 
 export interface StakingMetrics {
-  totalNominators: BN;
-  totalValidators: BN;
-  lastReward: BN;
-  lastTotalStake: BN;
-  validatorCount: BN;
-  maxNominatorsCount: BN;
-  maxValidatorsCount: BN;
-  minNominatorBond: BN;
-  historyDepth: BN;
-  payee: string | null;
-  unsub: { (): void } | null;
+  totalNominators: BigNumber;
+  totalValidators: BigNumber;
+  lastReward: BigNumber;
+  lastTotalStake: BigNumber;
+  validatorCount: BigNumber;
+  maxValidatorsCount: BigNumber;
+  minNominatorBond: BigNumber;
+  payee: PayeeConfig;
+  totalStaked: BigNumber;
 }
 
 export interface EraStakers {
@@ -23,9 +22,7 @@ export interface EraStakers {
   nominators: Array<any> | undefined;
   totalActiveNominators: number;
   activeValidators: number;
-  minActiveBond: number;
-  minStakingActiveBond: number;
-  ownStake: any;
+  activeAccountOwnStake: Array<any>;
 }
 
 export type NominationStatuses = { [key: string]: string };
@@ -36,7 +33,7 @@ export interface StakingTargets {
 
 export interface StakingContextInterface {
   getNominationsStatus: () => any;
-  getNominationsStatusFromTargets: (w: MaybeAccount, t: [any]) => any;
+  getNominationsStatusFromTargets: (w: MaybeAccount, t: Array<any>) => any;
   setTargets: (t: any) => any;
   hasController: () => boolean;
   getControllerNotImported: (a: MaybeAccount) => any;

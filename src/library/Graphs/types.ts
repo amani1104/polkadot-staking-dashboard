@@ -1,14 +1,15 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { AnySubscan } from 'types';
+import type BigNumber from 'bignumber.js';
+import type { AnySubscan } from 'types';
 
 export interface BondedProps {
-  active: number;
-  unlocking: number;
-  unlocked: number;
+  active: BigNumber;
+  free: BigNumber;
+  unlocking: BigNumber;
+  unlocked: BigNumber;
   inactive: boolean;
-  free: number;
 }
 
 export interface EraPointsProps {
@@ -43,10 +44,18 @@ export interface CardWrapperProps {
   transparent?: boolean;
   height?: string | number;
   flex?: boolean;
+  border?: string;
+  warning?: boolean;
 }
 
 export interface GraphWrapperProps {
+  minHeight?: number;
   transparent?: boolean;
   noMargin?: boolean;
   flex?: boolean;
+}
+
+export interface PayoutDayCursor {
+  amount: BigNumber;
+  event_id: string;
 }

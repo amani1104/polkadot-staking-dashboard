@@ -1,31 +1,33 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import BN from 'bn.js';
-import { useState, useEffect } from 'react';
-import { useActivePools } from 'contexts/Pools/ActivePools';
+import BigNumber from 'bignumber.js';
+import { useBalances } from 'contexts/Accounts/Balances';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
-import { useBalances } from 'contexts/Balances';
-import { useStaking } from 'contexts/Staking';
-import { humanNumber, planckBnToUnit } from 'Utils';
-import { CardHeaderWrapper } from 'library/Graphs/Wrappers';
+import { useActivePools } from 'contexts/Pools/ActivePools';
 import { usePoolsConfig } from 'contexts/Pools/PoolsConfig';
-import { useTxFees } from 'contexts/TxFees';
+import { useStaking } from 'contexts/Staking';
 import { useTransferOptions } from 'contexts/TransferOptions';
-import { UnbondInput } from './UnbondInput';
-import { Spacer } from '../Wrappers';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { isNotZero, planckToUnit, unitToPlanck } from 'Utils';
+import type { UnbondFeedbackProps } from '../types';
 import { Warning } from '../Warning';
-import { UnbondFeedbackProps } from '../types';
+import { Spacer } from '../Wrappers';
+import { UnbondInput } from './UnbondInput';
 
-export const UnbondFeedback = (props: UnbondFeedbackProps) => {
-  const { bondType } = props;
-  const inSetup = props.inSetup ?? false;
-  const warnings = props.warnings ?? [];
-  const setters = props.setters ?? [];
-  const listenIsValid = props.listenIsValid ?? (() => {});
-  const defaultBond = props.defaultBond || '';
-
+export const UnbondFeedback = ({
+  bondFor,
+  inSetup = false,
+  setters = [],
+  listenIsValid = () => {},
+  defaultBond,
+  setLocalResize,
+  parentErrors = [],
+  txFees,
+}: UnbondFeedbackProps) => {
+  const { t } = useTranslation('library');
   const { network } = useApi();
   const { activeAccount } = useConnect();
   const { staking, getControllerNotImported } = useStaking();
@@ -34,30 +36,33 @@ export const UnbondFeedback = (props: UnbondFeedbackProps) => {
   const { isDepositor } = useActivePools();
   const { stats } = usePoolsConfig();
   const { minJoinBond, minCreateBond } = stats;
-  const { units } = network;
+  const { units, unit } = network;
   const controller = getBondedAccount(activeAccount);
-  const { txFees } = useTxFees();
   const { minNominatorBond } = staking;
   const allTransferOptions = getTransferOptions(activeAccount);
 
-  // get bond options for either staking or pooling.
-  const transferOptions =
-    bondType === 'pool' ? allTransferOptions.pool : allTransferOptions.nominate;
+  const defaultValue = defaultBond ? String(defaultBond) : '';
 
-  const { freeToUnbond: freeToUnbondBn, active } = transferOptions;
+  // get bond options for either nominating or pooling.
+  const transferOptions =
+    bondFor === 'pool' ? allTransferOptions.pool : allTransferOptions.nominate;
+  const { active } = transferOptions;
 
   // store errors
   const [errors, setErrors] = useState<Array<string>>([]);
 
   // local bond state
-  const [bond, setBond] = useState<{ bond: number | string }>({
-    bond: defaultBond,
+  const [bond, setBond] = useState<{ bond: string }>({
+    bond: defaultValue,
   });
+
+  // current bond value BigNumber
+  const bondBn = unitToPlanck(String(bond.bond), units);
 
   // update bond on account change
   useEffect(() => {
     setBond({
-      bond: defaultBond,
+      bond: defaultValue,
     });
   }, [activeAccount]);
 
@@ -68,7 +73,7 @@ export const UnbondFeedback = (props: UnbondFeedbackProps) => {
 
   // if resize is present, handle on error change
   useEffect(() => {
-    if (props.setLocalResize) props.setLocalResize();
+    if (setLocalResize) setLocalResize();
   }, [errors]);
 
   // add this component's setBond to setters
@@ -78,94 +83,92 @@ export const UnbondFeedback = (props: UnbondFeedbackProps) => {
   });
 
   // bond amount to minimum threshold
-  const minBondBase =
-    bondType === 'pool'
+  const minBondBn =
+    bondFor === 'pool'
       ? inSetup || isDepositor()
-        ? planckBnToUnit(minCreateBond, units)
-        : planckBnToUnit(minJoinBond, units)
-      : planckBnToUnit(minNominatorBond, units);
+        ? minCreateBond
+        : minJoinBond
+      : minNominatorBond;
+  const minBondUnit = planckToUnit(minBondBn, units);
 
   // unbond amount to minimum threshold
-  const freeToUnbondToMin =
-    bondType === 'pool'
+  const unbondToMin =
+    bondFor === 'pool'
       ? inSetup || isDepositor()
-        ? planckBnToUnit(
-            BN.max(freeToUnbondBn.sub(minCreateBond), new BN(0)),
-            units
-          )
-        : planckBnToUnit(
-            BN.max(freeToUnbondBn.sub(minJoinBond), new BN(0)),
-            units
-          )
-      : planckBnToUnit(
-          BN.max(freeToUnbondBn.sub(minNominatorBond), new BN(0)),
-          units
-        );
+        ? BigNumber.max(active.minus(minCreateBond), 0)
+        : BigNumber.max(active.minus(minJoinBond), 0)
+      : BigNumber.max(active.minus(minNominatorBond), 0);
 
-  // get the actively bonded amount.
-  const activeBase = planckBnToUnit(active, units);
+  // check if bonded is below the minimum required
+  const nominatorActiveBelowMin =
+    bondFor === 'nominator' &&
+    isNotZero(active) &&
+    active.isLessThan(minNominatorBond);
+  const poolToMinBn = isDepositor() ? minCreateBond : minJoinBond;
+  const poolActiveBelowMin =
+    bondFor === 'pool' && active.isLessThan(poolToMinBn);
 
   // handle error updates
   const handleErrors = () => {
-    const _errors = warnings;
+    const newErrors = parentErrors;
     const _bond = bond.bond;
-    const _planck = 1 / new BN(10).pow(new BN(units)).toNumber();
+    const _decimals = bond.bond.toString().split('.')[1]?.length ?? 0;
 
     // unbond errors
-    if (Number(bond.bond) > activeBase) {
-      _errors.push('Unbond amount is more than your bonded balance.');
+    if (bondBn.isGreaterThan(active)) {
+      newErrors.push(t('unbondAmount'));
     }
 
     // unbond errors for staking only
-    if (bondType === 'stake') {
-      if (getControllerNotImported(controller)) {
-        _errors.push(
-          'You must have your controller account imported to unbond.'
-        );
+    if (bondFor === 'nominator')
+      if (getControllerNotImported(controller))
+        newErrors.push(t('importedToUnbond'));
+
+    if (bond.bond !== '' && bondBn.isLessThan(1)) {
+      newErrors.push(t('valueTooSmall'));
+    }
+
+    if (_decimals > units) {
+      newErrors.push(`${t('bondAmountDecimals', { unit })}`);
+    }
+
+    if (bondBn.isGreaterThan(unbondToMin)) {
+      // start the error message stating a min bond is required.
+      let err = `${t('minimumBond', {
+        minBondUnit: minBondUnit.toString(),
+        unit,
+      })} `;
+      // append the subject to the error message.
+      if (bondFor === 'nominator') {
+        err += t('whenActivelyNominating');
+      } else if (isDepositor()) {
+        err += t('asThePoolDepositor');
+      } else {
+        err += t('asAPoolMember');
       }
+      newErrors.push(err);
     }
 
-    if (bond.bond !== '' && Number(bond.bond) < _planck) {
-      _errors.push('Value is too small');
-    }
-
-    if (Number(bond.bond) > freeToUnbondToMin) {
-      _errors.push(
-        `A minimum bond of ${minBondBase} ${network.unit} is required ${
-          bondType === 'stake'
-            ? `when actively nominating`
-            : isDepositor()
-            ? `as the pool depositor`
-            : `as a pool member`
-        }.`
-      );
-    }
-    const bondValid = !_errors.length && _bond !== '';
-
-    listenIsValid(bondValid);
-    setErrors(_errors);
+    listenIsValid(!newErrors.length && _bond !== '');
+    setErrors(newErrors);
   };
 
   return (
     <>
-      <CardHeaderWrapper>
-        <h4>
-          Bonded: {humanNumber(activeBase)} {network.unit}
-        </h4>
-      </CardHeaderWrapper>
-      {errors.map((err: string, index: number) => (
-        <Warning key={`unbond_error_${index}`} text={err} />
+      {errors.map((err: string, i: number) => (
+        <Warning key={`unbond_error_${i}`} text={err} />
       ))}
       <Spacer />
       <UnbondInput
-        defaultValue={defaultBond}
-        disabled={false}
-        freeToUnbondToMin={freeToUnbondToMin}
+        active={active}
+        defaultValue={defaultValue}
+        disabled={
+          active.isZero() || nominatorActiveBelowMin || poolActiveBelowMin
+        }
+        unbondToMin={unbondToMin}
         setters={setters}
         value={bond.bond}
       />
     </>
   );
 };
-
-export default UnbondFeedback;

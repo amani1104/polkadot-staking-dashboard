@@ -1,49 +1,54 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState, useEffect } from 'react';
+import { ButtonInvert } from '@polkadotcloud/dashboard-ui';
+import BigNumber from 'bignumber.js';
 import { useApi } from 'contexts/Api';
 import { useConnect } from 'contexts/Connect';
-import { isNumeric } from 'Utils';
-import { Button } from 'library/Button';
-import { InputWrapper, RowWrapper } from '../Wrappers';
-import { BondInputProps } from '../types';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { BondInputProps } from '../types';
+import { InputWrapper } from '../Wrappers';
 
-export const BondInput = (props: BondInputProps) => {
-  const { disabled, freeBalance } = props;
-  const setters = props.setters ?? [];
-  const _value = props.value ?? 0;
-  const disableTxFeeUpdate = props.disableTxFeeUpdate ?? false;
-
+export const BondInput = ({
+  setters = [],
+  disabled,
+  defaultValue,
+  freeBalance,
+  disableTxFeeUpdate = false,
+  value = '0',
+  syncing = false,
+}: BondInputProps) => {
+  const { t } = useTranslation('library');
   const { network } = useApi();
   const { activeAccount } = useConnect();
 
   // the current local bond value
-  const [value, setValue] = useState(_value);
+  const [localBond, setLocalBond] = useState<string>(value);
 
-  // reset value to default when changing account
+  // reset value to default when changing account.
   useEffect(() => {
-    setValue(props.defaultValue ?? 0);
+    setLocalBond(defaultValue ?? '0');
   }, [activeAccount]);
 
   useEffect(() => {
     if (!disableTxFeeUpdate) {
-      setValue(_value.toString());
+      setLocalBond(value.toString());
     }
-  }, [_value]);
+  }, [value]);
 
-  // handle change for bonding
-  const handleChangeBond = (e: any) => {
+  // handle change for bonding.
+  const handleChangeBond = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (!isNumeric(val) && val !== '') {
+    if (new BigNumber(val).isNaN() && val !== '') {
       return;
     }
-    setValue(val);
+    setLocalBond(val);
     updateParentState(val);
   };
 
-  // apply bond to parent setters
-  const updateParentState = (val: any) => {
+  // apply bond to parent setters.
+  const updateParentState = (val: string) => {
     for (const s of setters) {
       s.set({
         ...s.current,
@@ -52,39 +57,46 @@ export const BondInput = (props: BondInputProps) => {
     }
   };
 
+  // available funds as jsx.
+  const availableFundsJsx = (
+    <p>
+      {syncing
+        ? '...'
+        : `${freeBalance.toFormat()} ${network.unit} ${t('available')}`}
+    </p>
+  );
+
   return (
-    <RowWrapper>
-      <div>
-        <InputWrapper>
-          <section style={{ opacity: disabled ? 0.5 : 1 }}>
-            <h3>Bond {network.unit}:</h3>
-            <input
-              type="text"
-              placeholder={`0 ${network.unit}`}
-              value={value}
-              onChange={(e) => {
-                handleChangeBond(e);
-              }}
-              disabled={disabled}
-            />
-          </section>
-        </InputWrapper>
-      </div>
-      <div>
-        <div>
-          <Button
-            inline
-            small
-            title="Max"
+    <InputWrapper>
+      <div className="inner">
+        <section style={{ opacity: disabled ? 0.5 : 1 }}>
+          <div className="input">
+            <div>
+              <input
+                type="text"
+                placeholder={`0 ${network.unit}`}
+                value={localBond}
+                onChange={(e) => {
+                  handleChangeBond(e);
+                }}
+                disabled={disabled}
+              />
+            </div>
+            <div>{availableFundsJsx}</div>
+          </div>
+        </section>
+        <section>
+          <ButtonInvert
+            text={t('max')}
+            disabled={disabled || syncing || freeBalance.isZero()}
             onClick={() => {
-              setValue(freeBalance);
-              updateParentState(freeBalance);
+              setLocalBond(freeBalance.toString());
+              updateParentState(freeBalance.toString());
             }}
           />
-        </div>
+        </section>
       </div>
-    </RowWrapper>
+      <div className="availableOuter">{availableFundsJsx}</div>
+    </InputWrapper>
   );
 };
-
-export default BondInput;

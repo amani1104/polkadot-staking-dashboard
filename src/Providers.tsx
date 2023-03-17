@@ -1,61 +1,78 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { BalancesProvider } from 'contexts/Accounts/Balances';
+import { LedgersProvider } from 'contexts/Accounts/Ledgers';
+import { APIProvider, useApi } from 'contexts/Api';
+import { ConnectProvider } from 'contexts/Connect';
+import { ExtensionsProvider } from 'contexts/Extensions';
+import { ExtrinsicsProvider } from 'contexts/Extrinsics';
+import { FastUnstakeProvider } from 'contexts/FastUnstake';
+import { FiltersProvider } from 'contexts/Filters';
+import { LedgerHardwareProvider } from 'contexts/Hardware/Ledger';
+import { HelpProvider } from 'contexts/Help';
+import { IdentitiesProvider } from 'contexts/Identities';
+import { MenuProvider } from 'contexts/Menu';
+import { MigrateProvider } from 'contexts/Migrate';
+import { ModalProvider } from 'contexts/Modal';
+import { NetworkMetricsProvider } from 'contexts/Network';
+import { NotificationsProvider } from 'contexts/Notifications';
+import { OverlayProvider } from 'contexts/Overlay';
+import { PluginsProvider } from 'contexts/Plugins';
+import { ActivePoolsProvider } from 'contexts/Pools/ActivePools';
+import { BondedPoolsProvider } from 'contexts/Pools/BondedPools';
+import { PoolMembersProvider } from 'contexts/Pools/PoolMembers';
+import { PoolMembershipsProvider } from 'contexts/Pools/PoolMemberships';
+import { PoolsConfigProvider } from 'contexts/Pools/PoolsConfig';
+import { SetupProvider } from 'contexts/Setup';
+import { StakingProvider } from 'contexts/Staking';
+import { SubscanProvider } from 'contexts/Subscan';
+import { useTheme } from 'contexts/Themes';
+import { TooltipProvider } from 'contexts/Tooltip';
+import { TransferOptionsProvider } from 'contexts/TransferOptions';
+import { TxFeesProvider } from 'contexts/TxFees';
+import { UIProvider } from 'contexts/UI';
+import { ValidatorsProvider } from 'contexts/Validators';
+import { withProviders } from 'library/Hooks';
+import { Router } from 'Router';
 import { ThemeProvider } from 'styled-components';
 import { EntryWrapper as Wrapper } from 'Wrappers';
-import Router from 'Router';
-import { withProviders } from 'library/Hooks';
-import { TooltipProvider } from 'contexts/Tooltip';
-import { TxFeesProvider } from 'contexts/TxFees';
-import { TransferOptionsProvider } from 'contexts/TransferOptions';
-import { AccountProvider } from './contexts/Account';
-import { APIProvider, useApi } from './contexts/Api';
-import { BalancesProvider } from './contexts/Balances';
-import { ConnectProvider } from './contexts/Connect';
-import { ExtrinsicsProvider } from './contexts/Extrinsics';
-import { MenuProvider } from './contexts/Menu';
-import { ModalProvider } from './contexts/Modal';
-import { NetworkMetricsProvider } from './contexts/Network';
-import { NotificationsProvider } from './contexts/Notifications';
-import { PoolsConfigProvider } from './contexts/Pools/PoolsConfig';
-import { BondedPoolsProvider } from './contexts/Pools/BondedPools';
-import { PoolMembersProvider } from './contexts/Pools/PoolMembers';
-import { PoolMembershipsProvider } from './contexts/Pools/PoolMemberships';
-import { ActivePoolsProvider } from './contexts/Pools/ActivePools';
-import { StakingProvider } from './contexts/Staking';
-import { SubscanProvider } from './contexts/Subscan';
-import { ValidatorsProvider } from './contexts/Validators';
-import { UIProvider } from './contexts/UI';
-import { useTheme } from './contexts/Themes';
-import { SessionEraProvider } from './contexts/SessionEra';
-import { HelpProvider } from './contexts/Help';
 
-export const WrappedRouter = () => (
-  <Wrapper>
-    <Router />
-  </Wrapper>
-);
+// `polkadot-dashboard-ui` theme classes are inserted here.
+export const WrappedRouter = () => {
+  const { mode } = useTheme();
+  const { network } = useApi();
 
+  return (
+    <Wrapper className={`theme-${network.name} theme-${mode}`}>
+      <Router />
+    </Wrapper>
+  );
+};
+
+// App-specific theme classes are inserted here.
 export const ThemedRouter = () => {
   const { mode } = useTheme();
   const { network } = useApi();
 
   return (
-    <ThemeProvider
-      theme={{ mode, card: 'shadow', network: `${network.name}-${mode}` }}
-    >
+    <ThemeProvider theme={{ mode, network: `${network.name}-${mode}` }}>
       <WrappedRouter />
     </ThemeProvider>
   );
 };
 
 export const Providers = withProviders(
+  FiltersProvider,
   APIProvider,
+  LedgerHardwareProvider,
+  ExtensionsProvider,
   ConnectProvider,
   HelpProvider,
   NetworkMetricsProvider,
-  AccountProvider,
+  IdentitiesProvider,
   BalancesProvider,
+  LedgersProvider,
   StakingProvider,
   PoolsConfigProvider,
   BondedPoolsProvider,
@@ -64,7 +81,10 @@ export const Providers = withProviders(
   ActivePoolsProvider,
   TransferOptionsProvider,
   ValidatorsProvider,
+  FastUnstakeProvider,
   UIProvider,
+  PluginsProvider,
+  SetupProvider,
   SubscanProvider,
   MenuProvider,
   TooltipProvider,
@@ -72,7 +92,6 @@ export const Providers = withProviders(
   TxFeesProvider,
   ExtrinsicsProvider,
   ModalProvider,
-  SessionEraProvider
+  OverlayProvider,
+  MigrateProvider
 )(ThemedRouter);
-
-export default Providers;

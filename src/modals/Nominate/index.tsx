@@ -1,71 +1,70 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlayCircle } from '@fortawesome/free-solid-svg-icons';
 import { faArrowAltCircleUp } from '@fortawesome/free-regular-svg-icons';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { useBalances } from 'contexts/Balances';
+import { ButtonSubmit } from '@polkadotcloud/dashboard-ui';
+import { useBalances } from 'contexts/Accounts/Balances';
+import { useLedgers } from 'contexts/Accounts/Ledgers';
 import { useApi } from 'contexts/Api';
-import { useModal } from 'contexts/Modal';
-import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
 import { useConnect } from 'contexts/Connect';
-import { Warning } from 'library/Form/Warning';
+import { useModal } from 'contexts/Modal';
 import { useStaking } from 'contexts/Staking';
-import { planckBnToUnit } from 'Utils';
-import { EstimatedTxFee } from 'library/EstimatedTxFee';
 import { useTxFees } from 'contexts/TxFees';
-import { Title } from 'library/Modal/Title';
-import {
-  FooterWrapper,
-  Separator,
-  NotesWrapper,
-  PaddingWrapper,
-} from '../Wrappers';
+import { Warning } from 'library/Form/Warning';
+import { useSubmitExtrinsic } from 'library/Hooks/useSubmitExtrinsic';
+import { Action } from 'library/Modal/Action';
+import { Close } from 'library/Modal/Close';
+import { SubmitTx } from 'library/SubmitTx';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { planckToUnit } from 'Utils';
+import { PaddingWrapper, WarningsWrapper } from '../Wrappers';
 
 export const Nominate = () => {
+  const { t } = useTranslation('modals');
   const { api, network } = useApi();
   const { activeAccount } = useConnect();
   const { targets, staking, getControllerNotImported } = useStaking();
-  const { getBondedAccount, getLedgerForStash } = useBalances();
+  const { getBondedAccount } = useBalances();
+  const { getLedgerForStash } = useLedgers();
   const { setStatus: setModalStatus } = useModal();
   const { txFeesValid } = useTxFees();
-  const { units } = network;
+  const { units, unit } = network;
   const { minNominatorBond } = staking;
   const controller = getBondedAccount(activeAccount);
   const { nominations } = targets;
   const ledger = getLedgerForStash(activeAccount);
   const { active } = ledger;
 
-  const activeBase = planckBnToUnit(active, units);
-  const minNominatorBondBase = planckBnToUnit(minNominatorBond, units);
+  const activeUnit = planckToUnit(active, units);
+  const minNominatorBondUnit = planckToUnit(minNominatorBond, units);
 
   // valid to submit transaction
   const [valid, setValid] = useState<boolean>(false);
 
   // ensure selected key is valid
   useEffect(() => {
-    setValid(nominations.length > 0 && activeBase >= minNominatorBondBase);
+    setValid(
+      nominations.length > 0 &&
+        activeUnit.isGreaterThanOrEqualTo(minNominatorBondUnit)
+    );
   }, [targets]);
 
   // tx to submit
-  const tx = () => {
-    let _tx = null;
+  const getTx = () => {
+    let tx = null;
     if (!valid || !api) {
-      return _tx;
+      return tx;
     }
-    const targetsToSubmit = nominations.map((item: any) => {
-      return {
-        Id: item.address,
-      };
-    });
-    _tx = api.tx.staking.nominate(targetsToSubmit);
-    return _tx;
+    const targetsToSubmit = nominations.map((item: any) => ({
+      Id: item.address,
+    }));
+    tx = api.tx.staking.nominate(targetsToSubmit);
+    return tx;
   };
 
   const { submitTx, submitting } = useSubmitExtrinsic({
-    tx: tx(),
+    tx: getTx(),
     from: controller,
     shouldSubmit: valid,
     callbackSubmit: () => {
@@ -77,62 +76,51 @@ export const Nominate = () => {
   // warnings
   const warnings = [];
   if (getControllerNotImported(controller)) {
-    warnings.push(
-      'You must have your controller account imported to start nominating'
-    );
+    warnings.push(t('mustHaveController'));
   }
   if (!nominations.length) {
-    warnings.push('You have no nominations set.');
+    warnings.push(`${t('noNominationsSet')}`);
   }
-  if (activeBase < minNominatorBondBase) {
+
+  if (!activeUnit.isGreaterThan(minNominatorBondUnit)) {
     warnings.push(
-      `You do not meet the minimum nominator bond of ${minNominatorBondBase} ${network.unit}. Please bond some funds before nominating.`
+      `${t('notMeetMinimum', {
+        minNominatorBondUnit: minNominatorBondUnit.toString(),
+        unit,
+      })}`
     );
   }
 
   return (
     <>
-      <Title title="Nominate" icon={faPlayCircle} />
-      <PaddingWrapper verticalOnly>
-        <div
-          style={{ padding: '0 1rem', width: '100%', boxSizing: 'border-box' }}
-        >
-          {warnings.map((text: any, index: number) => (
-            <Warning key={index} text={text} />
-          ))}
-          <h2>
-            You Have {nominations.length} Nomination
-            {nominations.length === 1 ? '' : 's'}
-          </h2>
-          <Separator />
-          <NotesWrapper>
-            <p>
-              Once submitted, you will start nominating your chosen validators.
-            </p>
-            <EstimatedTxFee />
-          </NotesWrapper>
-          <FooterWrapper>
-            <div>
-              <button
-                type="button"
-                className="submit"
-                onClick={() => submitTx()}
-                disabled={
-                  !valid || submitting || warnings.length > 0 || !txFeesValid
-                }
-              >
-                <FontAwesomeIcon
-                  transform="grow-2"
-                  icon={faArrowAltCircleUp as IconProp}
-                />
-                Submit
-              </button>
-            </div>
-          </FooterWrapper>
-        </div>
+      <Close />
+      <PaddingWrapper>
+        <h2 className="title unbounded">{t('nominate')}</h2>
+        {warnings.length > 0 ? (
+          <WarningsWrapper>
+            {warnings.map((text: any, index: number) => (
+              <Warning key={index} text={text} />
+            ))}
+          </WarningsWrapper>
+        ) : null}
+        <Action text={t('haveNomination', { count: nominations.length })} />
+        <p>{t('onceSubmitted')}</p>
       </PaddingWrapper>
+      <SubmitTx
+        fromController
+        buttons={[
+          <ButtonSubmit
+            key="button_submit"
+            text={`${submitting ? t('submitting') : t('submit')}`}
+            iconLeft={faArrowAltCircleUp}
+            iconTransform="grow-2"
+            onClick={() => submitTx()}
+            disabled={
+              !valid || submitting || warnings.length > 0 || !txFeesValid
+            }
+          />,
+        ]}
+      />
     </>
   );
 };
-
-export default Nominate;

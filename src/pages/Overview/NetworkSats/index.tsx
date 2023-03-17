@@ -1,23 +1,28 @@
-// Copyright 2022 @paritytech/polkadot-staking-dashboard authors & contributors
+// Copyright 2023 @paritytech/polkadot-staking-dashboard authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { CardWrapper, CardHeaderWrapper } from 'library/Graphs/Wrappers';
-import { OpenHelpIcon } from 'library/OpenHelpIcon';
-import { Wrapper } from './Wrappers';
-import { Inflation } from './Inflation';
+import { ButtonHelp } from '@polkadotcloud/dashboard-ui';
+import { useHelp } from 'contexts/Help';
+import { CardHeaderWrapper, CardWrapper } from 'library/Graphs/Wrappers';
+import { useTranslation } from 'react-i18next';
 import { Announcements } from './Announcements';
+import { Header } from './Header';
+import { Wrapper } from './Wrappers';
 
 export const NetworkStats = () => {
+  const { t } = useTranslation('pages');
+  const { openHelp } = useHelp();
+
   return (
     <CardWrapper>
       <CardHeaderWrapper>
         <h3>
-          Network Stats
-          <OpenHelpIcon helpKey="Network Stats" />
+          {t('overview.networkStats')}
+          <ButtonHelp marginLeft onClick={() => openHelp('Network Stats')} />
         </h3>
       </CardHeaderWrapper>
       <Wrapper>
-        <Inflation />
+        <Header />
         <Announcements />
       </Wrapper>
     </CardWrapper>
